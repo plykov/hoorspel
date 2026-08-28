@@ -18,7 +18,7 @@ Install it, pick a clip from the shelf, or import your own recording. Trim to th
 
 ## Hosting
 
-The app is a static SPA on [GitHub Pages](https://plykov.github.io/hoorspel/). Pushes to `main` build and deploy via `.github/workflows/pages.yml`. Progress and imported clips live on the device (IndexedDB + Cache Storage). There is no account layer in this tree.
+The app is a static SPA on [GitHub Pages](https://plykov.github.io/hoorspel/). Source lives on `main`; the published site is the `gh-pages` branch. Progress and imported clips live on the device (IndexedDB + Cache Storage). There is no account layer in this tree.
 
 ## Develop
 
