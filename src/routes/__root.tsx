@@ -3,9 +3,11 @@ import { AuthProvider } from "@/lib/auth/provider";
 import { PreviewHostBridge } from "@/components/preview-host-bridge";
 import { AppShell } from "@/components/app-shell";
 import { Toaster } from "sonner";
+import { withBase } from "@/lib/base";
 import appCss from "../styles.css?url";
 
 const APP_NAME = "Hoorspel";
+const pages = import.meta.env.VITE_GITHUB_PAGES === "1";
 
 export const Route = createRootRoute({
   head: () => ({
@@ -20,10 +22,16 @@ export const Route = createRootRoute({
       },
     ],
     links: [
-      { rel: "icon", type: "image/svg+xml", href: "/favicon.svg" },
+      { rel: "icon", type: "image/svg+xml", href: withBase("favicon.svg") },
       { rel: "stylesheet", href: appCss },
-      { rel: "manifest", href: "/__grok/manifest.webmanifest" },
-      { rel: "apple-touch-icon", href: "/__grok/icon-180.png" },
+      {
+        rel: "manifest",
+        href: pages ? withBase("manifest.webmanifest") : "/__grok/manifest.webmanifest",
+      },
+      {
+        rel: "apple-touch-icon",
+        href: pages ? withBase("icon-192.png") : "/__grok/icon-180.png",
+      },
       {
         rel: "stylesheet",
         href: "https://fonts.googleapis.com/css2?family=Atkinson+Hyperlegible:ital,wght@0,400;0,700;1,400&family=Fraunces:ital,opsz,wght@0,9..144,500;0,9..144,600;1,9..144,500&family=Source+Sans+3:ital,wght@0,400;0,500;0,600;1,400&display=swap",

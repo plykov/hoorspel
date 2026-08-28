@@ -1,5 +1,7 @@
 /** Cache names + share-target shape. Keep in sync with `public/sw.js`. */
 
+import { BASE_URL, withBase } from "./base.ts";
+
 export const MEDIA_CACHE = "hoorspel-media-v1";
 export const SHARE_CACHE = "hoorspel-share-v1";
 export const MEDIA_PREFIX = "/__media/";
@@ -36,7 +38,7 @@ export const SHARE_TARGET = {
 } as const;
 
 export function mediaPath(id: string): string {
-  return `${MEDIA_PREFIX}${encodeURIComponent(id)}`;
+  return withBase(`__media/${encodeURIComponent(id)}`);
 }
 
 export function mergeShareTarget<T extends Record<string, unknown>>(manifest: T): T & {
@@ -47,7 +49,7 @@ export function mergeShareTarget<T extends Record<string, unknown>>(manifest: T)
 
 export function registerServiceWorker(): void {
   if (typeof navigator === "undefined" || !("serviceWorker" in navigator)) return;
-  void navigator.serviceWorker.register("/sw.js", { scope: "/" }).catch(() => {
+  void navigator.serviceWorker.register(withBase("sw.js"), { scope: BASE_URL }).catch(() => {
     /* insecure context or blocked — import still works in-session */
   });
 }

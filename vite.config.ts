@@ -15,6 +15,12 @@ import { appEnvPlugin } from "./scripts/app-env-plugin.mjs";
 import { isMigrationFile } from "./scripts/migration-plan.mjs";
 import { SHARE_TARGET } from "./src/lib/share-target.ts";
 
+const isGitHubPages =
+  process.env.GITHUB_PAGES === "1" ||
+  process.env.NITRO_PRESET === "github_pages" ||
+  process.env.NITRO_PRESET === "github-pages";
+const pagesBasePath = (process.env.PAGES_BASE || "/hoorspel").replace(/\/$/, "") || "/hoorspel";
+
 /** The files `src/lib/db.ts` globs — same directory, same non-recursive scope. */
 function hasGlobbedMigrations(root: string): boolean {
   try {
@@ -205,6 +211,7 @@ function shareTargetPlugin(): Plugin {
 // The dev server starts once `src/router.tsx` and `src/routes/` exist — see
 // AGENTS.md § "First scaffold".
 export default defineConfig(({ command, isPreview }) => ({
+  base: isGitHubPages ? `${pagesBasePath}/` : "/",
   server: {
     host: "0.0.0.0",
     port: 8080,
@@ -228,17 +235,23 @@ export default defineConfig(({ command, isPreview }) => ({
     // PWA head + ?install=1 tutorial page; runs before Start/Nitro.
     grokPwaPlugin(),
     tailwindcss(),
-    tanstackStart(),
+    tanstackStart(
+      isGitHubPages
+        ? { spa: { enabled: true }, router: { basepath: pagesBasePath } }
+        : {},
+    ),
     ...(command === "build" || isPreview
-      ? [
-          nitro({
-            preset: "vercel",
-            // Auto-registers server/middleware/* (the PWA install page +
-            // manifest + head-tag middleware). Nitro v3 defaults serverDir to
-            // false, so removing this silently unwires /?install=1 on deploys.
-            serverDir: "./server",
-          }),
-        ]
+      ? isGitHubPages
+        ? []
+        : [
+            nitro({
+              preset: "vercel",
+              // Auto-registers server/middleware/* (the PWA install page +
+              // manifest + head-tag middleware). Nitro v3 defaults serverDir to
+              // false, so removing this silently unwires /?install=1 on deploys.
+              serverDir: "./server",
+            }),
+          ]
       : []),
     viteReact(),
   ],

@@ -1,12 +1,26 @@
 /* Hoorspel service worker — offline media + Web Share Target.
+ * Scope-aware so it works at `/` and at `/hoorspel/` on GitHub Pages.
  * Cache names must match src/lib/share-target.ts. */
 const MEDIA_CACHE = "hoorspel-media-v1";
 const SHARE_CACHE = "hoorspel-share-v1";
-const MEDIA_PREFIX = "/__media/";
 const SHARE_FILE = "/__share/file";
 const SHARE_META = "/__share/meta";
 const IDB_NAME = "hoorspel-media";
 const IDB_STORE = "clips";
+
+function scopeUrl() {
+  const scope = self.registration?.scope || self.location.href;
+  return new URL("./", scope);
+}
+
+function mediaPrefix() {
+  const path = scopeUrl().pathname;
+  return `${path.endsWith("/") ? path : `${path}/`}__media/`;
+}
+
+function importPath() {
+  return new URL("import", scopeUrl()).pathname.replace(/\/$/, "");
+}
 
 self.addEventListener("install", (event) => {
   event.waitUntil(self.skipWaiting());
@@ -20,12 +34,12 @@ self.addEventListener("fetch", (event) => {
   const url = new URL(event.request.url);
   if (url.origin !== self.location.origin) return;
 
-  if (event.request.method === "POST" && url.pathname === "/import") {
+  if (event.request.method === "POST" && url.pathname.replace(/\/$/, "") === importPath()) {
     event.respondWith(handleShare(event.request));
     return;
   }
 
-  if (event.request.method === "GET" && url.pathname.startsWith(MEDIA_PREFIX)) {
+  if (event.request.method === "GET" && url.pathname.startsWith(mediaPrefix())) {
     event.respondWith(serveMedia(event.request, url.pathname));
   }
 });
@@ -66,7 +80,7 @@ async function handleShare(request) {
   } catch {
     /* still land on the import page */
   }
-  return Response.redirect(new URL("/import?shared=1", self.location.origin), 303);
+  return Response.redirect(new URL("import?shared=1", scopeUrl()), 303);
 }
 
 async function serveMedia(request, pathname) {
@@ -76,7 +90,7 @@ async function serveMedia(request, pathname) {
   const byPath = await cache.match(pathname);
   if (byPath) return byPath;
 
-  const id = decodeURIComponent(pathname.slice(MEDIA_PREFIX.length));
+  const id = decodeURIComponent(pathname.slice(mediaPrefix().length));
   const blob = await idbGet(id);
   if (blob) {
     const response = new Response(blob, {

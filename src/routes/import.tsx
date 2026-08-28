@@ -7,7 +7,7 @@ import { Input, Textarea } from "@/components/ui/input";
 import { SAMPLE_IMPORT } from "@/data/lessons";
 import { assembleFromSegments } from "@/lib/assemble";
 import { detect, isLikelyDutch, parseTranscript, RULE_NAMES } from "@/lib/grammar";
-import { generateLessonFn } from "@/lib/generate";
+import { generateLesson } from "@/lib/generate";
 import { putMedia } from "@/lib/media";
 import { takeSharedImport } from "@/lib/share-target";
 import { hasSpeechRecognition, recognizeDutch } from "@/lib/speech";
@@ -136,7 +136,7 @@ function ImportPage() {
     }
     try {
       const result = await Promise.race([
-        generateLessonFn({ data: { title, transcript, residency } }),
+        generateLesson({ title, transcript, residency }),
         new Promise<null>((resolve) => setTimeout(() => resolve(null), 9000)),
       ]);
       const built = result && result.ok ? result.lesson : fallback;
