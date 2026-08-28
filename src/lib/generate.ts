@@ -1,5 +1,5 @@
 import { assembleFromSegments } from "./assemble";
-import { parseTranscript } from "./grammar";
+import { asDialogue, parseTranscript } from "./grammar";
 import { detect, RULE_NAMES } from "./grammar";
 import { validateLesson } from "./validate";
 import type { Lesson } from "./types";
@@ -18,9 +18,9 @@ function regionOf(residency: GenerateInput["residency"]): Lesson["processing_reg
 
 /** Client-safe assembly used on GitHub Pages (no server functions). */
 export function generateLessonLocal(data: GenerateInput): GenerateResult {
-  const segments = parseTranscript(data.transcript);
-  if (segments.length < 2) {
-    return { ok: false, error: "Need at least two lines of dialogue." };
+  const segments = parseTranscript(asDialogue(data.transcript));
+  if (segments.length < 1) {
+    return { ok: false, error: "Need at least one line of what you heard." };
   }
   const base = assembleFromSegments(data.title || "Imported clip", segments);
   base.processing_region = regionOf(data.residency);

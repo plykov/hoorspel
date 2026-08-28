@@ -6,8 +6,9 @@ import { Card } from "@/components/ui/card";
 import { Input, Textarea } from "@/components/ui/input";
 import { SAMPLE_IMPORT } from "@/data/lessons";
 import { assembleFromSegments } from "@/lib/assemble";
-import { detect, isLikelyDutch, parseTranscript, RULE_NAMES } from "@/lib/grammar";
+import { asDialogue, detect, isLikelyDutch, parseTranscript, RULE_NAMES } from "@/lib/grammar";
 import { generateLesson } from "@/lib/generate";
+import { AppErrorComponent } from "@/lib/error-component";
 import { putMedia } from "@/lib/media";
 import { takeSharedImport } from "@/lib/share-target";
 import { hasSpeechRecognition, recognizeDutch } from "@/lib/speech";
@@ -18,6 +19,7 @@ import { cn } from "@/lib/utils";
 import { toast } from "sonner";
 
 export const Route = createFileRoute("/import")({
+  errorComponent: AppErrorComponent,
   server: {
     handlers: {
       POST: async () =>
@@ -113,11 +115,15 @@ function ImportPage() {
       toast.error(lang.reason);
       return;
     }
-    if (kept.length < 2) {
-      toast.error("Keep at least two lines — a clip needs an exchange.");
+    if (!kept.length) {
+      toast.error(
+        clip
+          ? "Type what you hear (A: … / B: …), or dictate a line. Cloud transcription was not available."
+          : "Paste or dictate at least one line of what you heard.",
+      );
       return;
     }
-    const transcript = keptTranscript(segments, skipped);
+    const transcript = asDialogue(keptTranscript(segments, skipped));
     setBusy(true);
     let builtSegs = parseTranscript(transcript);
     if (sttWords.length) builtSegs = applyWordTimings(builtSegs, sttWords);
@@ -206,7 +212,7 @@ function ImportPage() {
         onTranscript={(text, words) => {
           setSkipped(new Set());
           setSttWords(words);
-          setRaw(text);
+          setRaw(asDialogue(text));
           setTitle((t) => (t === "Imported clip" && clip?.name ? clip.name : t));
         }}
       />
@@ -353,8 +359,15 @@ function ImportPage() {
         never appear on the public shelf.
       </label>
 
-      <Button size="lg" disabled={busy || kept.length < 2} onClick={() => void run()}>
-        {busy ? "Writing the lesson…" : "Transcribe & build lesson"}
+      {clip && !raw.trim() ? (
+        <p className="text-sm text-muted-foreground">
+          Audio is ready. Type the lines you hear below, then build. Automatic transcription is
+          optional and may not be available.
+        </p>
+      ) : null}
+
+      <Button size="lg" disabled={busy || !kept.length} onClick={() => void run()}>
+        {busy ? "Writing the lesson…" : kept.length ? "Build lesson" : "Type the transcript first"}
       </Button>
     </div>
   );

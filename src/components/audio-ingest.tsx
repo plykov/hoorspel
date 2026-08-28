@@ -11,7 +11,8 @@ import {
   preflightFile,
   prepareSttPayload,
 } from "@/lib/media";
-import { transcribeAudioFn, type SttWord } from "@/lib/stt";
+import { asDialogue } from "@/lib/grammar";
+import { cloudSttOff, STT_TYPE_HINT, transcribeSafely, type SttWord } from "@/lib/stt";
 import type { ResidencyPref } from "@/lib/types";
 import { cn, formatTime } from "@/lib/utils";
 import { toast } from "sonner";
@@ -98,7 +99,11 @@ export function AudioIngest({
       setPeaks(peaksOf(buf));
       setStart(0);
       setEnd(span);
-      toast.message(`${Math.round(check.duration)}s loaded. Trim the span, then transcribe.`);
+      toast.message(
+        cloudSttOff() || residency === "device"
+          ? `${Math.round(check.duration)}s loaded. ${STT_TYPE_HINT}`
+          : `${Math.round(check.duration)}s loaded. Trim, then transcribe — or type what you hear.`,
+      );
     } catch {
       toast.error("Could not decode that file. Try mp3, wav or m4a.");
     } finally {
@@ -133,24 +138,22 @@ export function AudioIngest({
     setBusy("stt");
     try {
       const payload = await prepareSttPayload(file, buffer, start, end);
-      const result = await Promise.race([
-        transcribeAudioFn({
-          data: { b64: payload.b64, filename: payload.filename, mime: payload.mime },
-        }),
+      const raced = await Promise.race([
+        transcribeSafely({ b64: payload.b64, filename: payload.filename, mime: payload.mime }),
         new Promise<null>((resolve) => setTimeout(() => resolve(null), 50000)),
       ]);
-      if (!result) {
-        toast.error("Transcription took too long. Trim shorter, or type what you hear.");
+      if (!raced) {
+        toast.error(`Transcription took too long. ${STT_TYPE_HINT}`);
         return;
       }
-      if (!result.ok) {
-        toast.error(result.error);
+      if (!raced.ok) {
+        toast.error(raced.error);
         return;
       }
-      onTranscript(result.dialogue || result.text, result.words);
+      onTranscript(asDialogue(raced.dialogue || raced.text), raced.words);
       toast.success("Transcript ready — edit anything that looks wrong. Disfluencies stay.");
     } catch (e) {
-      toast.error(e instanceof Error ? e.message : "Could not transcribe.");
+      toast.error(e instanceof Error ? e.message : `Could not transcribe. ${STT_TYPE_HINT}`);
     } finally {
       setBusy(null);
     }
@@ -168,15 +171,15 @@ export function AudioIngest({
     }
     setBusy("stt");
     try {
-      const result = await transcribeAudioFn({ data: { url } });
+      const result = await transcribeSafely({ url });
       if (!result.ok) {
         toast.error(result.error);
         return;
       }
-      onTranscript(result.dialogue || result.text, result.words);
+      onTranscript(asDialogue(result.dialogue || result.text), result.words);
       toast.success("Transcript from the linked file. Audio stays at the source — paste a file to keep playback.");
     } catch {
-      toast.error("Could not fetch that URL.");
+      toast.error(`Could not fetch that URL. ${STT_TYPE_HINT}`);
     } finally {
       setBusy(null);
     }
@@ -311,12 +314,12 @@ export function AudioIngest({
             <Button
               type="button"
               onClick={() => void transcribe()}
-              disabled={busy === "stt" || residency === "device"}
+              disabled={busy === "stt" || residency === "device" || cloudSttOff()}
             >
               {busy === "stt"
                 ? "Transcribing…"
-                : residency === "device"
-                  ? "On-device — type the transcript"
+                : residency === "device" || cloudSttOff()
+                  ? "Type the transcript below"
                   : "Transcribe this span"}
             </Button>
           </div>

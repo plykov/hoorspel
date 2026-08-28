@@ -408,6 +408,22 @@ export function parseTranscript(raw: string): Segment[] {
   return segs;
 }
 
+/** Turn a wall of text into speaker lines so a recording without diarization still builds. */
+export function asDialogue(raw: string): string {
+  const t = raw.trim();
+  if (!t) return t;
+  if (parseTranscript(t).length >= 2) return t;
+  const sentences = t
+    .split(/(?<=[.!?…])\s+/)
+    .map((s) => s.trim())
+    .filter(Boolean);
+  if (sentences.length >= 2) {
+    return sentences.map((s, i) => `${i % 2 === 0 ? "A" : "B"}: ${s}`).join("\n");
+  }
+  if (/^(?:\[?[A-Za-z0-9]+\]?\s*[:\-–]\s*)/.test(t)) return t;
+  return `A: ${normalizeDutchSpacing(t)}`;
+}
+
 export function pickVocab(segments: Segment[], max = 10) {
   const counts = new Map<string, { count: number; start: number; form: string }>();
   for (const seg of segments) {

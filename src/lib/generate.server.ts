@@ -1,6 +1,6 @@
 import { createServerFn } from "@tanstack/react-start";
 import { assembleFromSegments } from "./assemble";
-import { detect, parseTranscript, RULE_NAMES } from "./grammar";
+import { detect, parseTranscript, asDialogue, RULE_NAMES } from "./grammar";
 import { validateLesson } from "./validate";
 import type { Lesson } from "./types";
 
@@ -11,9 +11,9 @@ export const aiAvailable = createServerFn({ method: "GET" }).handler(async () =>
 export const generateLessonFn = createServerFn({ method: "POST" })
   .validator((input: { title: string; transcript: string; residency: "device" | "eu" | "fastest" }) => input)
   .handler(async ({ data }): Promise<{ ok: true; lesson: Lesson } | { ok: false; error: string }> => {
-    const segments = parseTranscript(data.transcript);
-    if (segments.length < 2) {
-      return { ok: false, error: "Need at least two lines of dialogue." };
+    const segments = parseTranscript(asDialogue(data.transcript));
+    if (segments.length < 1) {
+      return { ok: false, error: "Need at least one line of what you heard." };
     }
     const base = assembleFromSegments(data.title || "Imported clip", segments);
     base.processing_region = data.residency === "eu" ? "eu-west" : data.residency === "device" ? "device" : "us";

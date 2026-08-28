@@ -119,6 +119,44 @@ export function wordsToDialogue(words: SttWord[], fallback = ""): string {
     .join("\n");
 }
 
+export const STT_TYPE_HINT =
+  "Play the clip and type what you hear (A: … / B: …), or use Dictate a line.";
+
+export function sttErrorMessage(error: unknown): string {
+  if (typeof Response !== "undefined" && error instanceof Response) {
+    return `Transcription is not available here. ${STT_TYPE_HINT}`;
+  }
+  const msg = error instanceof Error ? error.message : String(error ?? "");
+  if (
+    /invariant failed/i.test(msg) ||
+    /content-type/i.test(msg) ||
+    /expected result/i.test(msg) ||
+    /failed to fetch/i.test(msg) ||
+    /load failed/i.test(msg) ||
+    /networkerror/i.test(msg)
+  ) {
+    return `Transcription is not available here. ${STT_TYPE_HINT}`;
+  }
+  return msg.trim() || `Could not transcribe. ${STT_TYPE_HINT}`;
+}
+
+export function cloudSttOff(): boolean {
+  return import.meta.env.VITE_GITHUB_PAGES === "1";
+}
+
+export async function transcribeSafely(
+  data: { b64?: string; filename?: string; mime?: string; url?: string },
+): Promise<SttResult | { ok: false; error: string }> {
+  if (cloudSttOff()) {
+    return { ok: false, error: `This copy has no cloud transcription. ${STT_TYPE_HINT}` };
+  }
+  try {
+    return await transcribeAudioFn({ data });
+  } catch (error) {
+    return { ok: false, error: sttErrorMessage(error) };
+  }
+}
+
 export function applyWordTimings(segments: Segment[], words: SttWord[]): Segment[] {
   if (!words.length) return segments;
   let wi = 0;

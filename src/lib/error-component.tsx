@@ -1,7 +1,15 @@
 import type { ErrorComponentProps } from "@tanstack/react-router";
 import { TriangleAlert } from "lucide-react";
 
-export function AppErrorComponent({ error }: ErrorComponentProps) {
+function friendlyMessage(error: Error): string {
+  const msg = error.message || "";
+  if (/invariant failed/i.test(msg) || /content-type/i.test(msg) || /expected result/i.test(msg)) {
+    return "This clip could not be transcribed automatically. Type what you hear, then build the lesson.";
+  }
+  return msg || "An unexpected error occurred. Try reloading the page.";
+}
+
+export function AppErrorComponent({ error, reset }: ErrorComponentProps) {
   return (
     <main
       className={
@@ -14,8 +22,18 @@ export function AppErrorComponent({ error }: ErrorComponentProps) {
       </span>
       <h1 className="text-lg font-semibold">Something went wrong</h1>
       <p className="max-w-md text-sm break-words text-zinc-500 dark:text-zinc-400">
-        {error.message || "An unexpected error occurred. Try reloading the page."}
+        {friendlyMessage(error)}
       </p>
+      {error.message && friendlyMessage(error) !== error.message ? (
+        <p className="max-w-md text-xs break-words text-zinc-400 dark:text-zinc-500">{error.message}</p>
+      ) : null}
+      <button
+        type="button"
+        onClick={() => reset()}
+        className="mt-2 h-11 rounded-md bg-zinc-900 px-4 text-sm font-medium text-zinc-50 dark:bg-zinc-100 dark:text-zinc-900"
+      >
+        Try again
+      </button>
     </main>
   );
 }
