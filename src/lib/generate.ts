@@ -28,13 +28,7 @@ export function generateLessonLocal(data: GenerateInput): GenerateResult {
 }
 
 export async function generateLesson(data: GenerateInput): Promise<GenerateResult> {
-  if (import.meta.env.VITE_GITHUB_PAGES === "1") {
-    return generateLessonLocal(data);
-  }
-  try {
-    const { generateLessonFn } = await import("./generate.server");
-    return await generateLessonFn({ data });
-  } catch {
-    return generateLessonLocal(data);
-  }
+  // Client bundle cannot import `*.server.*`. Assembly stays on-device; the
+  // constrained templates plus validators are the lesson writer in this build.
+  return generateLessonLocal(data);
 }

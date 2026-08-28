@@ -6,8 +6,8 @@ import { Card } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { hasSpeechRecognition, recognizeDutch, scoreTranscript } from "@/lib/speech";
 import { useMediaUrl } from "@/lib/media";
-import { lessonById, useHoorspel } from "@/lib/store";
-import type { Exercise } from "@/lib/types";
+import { lessonById, useHoorspel, weakPointsOf } from "@/lib/store";
+import type { Exercise, Segment } from "@/lib/types";
 import {
   choiceIsCorrect,
   cn,
@@ -29,6 +29,7 @@ function PracticePage() {
   const mark = useHoorspel((s) => s.markProgress);
   const enqueue = useHoorspel((s) => s.enqueueLesson);
   const rawProgress = useHoorspel((s) => s.progress[id]);
+  const attempts = useHoorspel((s) => s.attempts);
   const src = useMediaUrl(lesson?.media_id);
   const navigate = useNavigate();
   const [idx, setIdx] = useState(0);
@@ -64,9 +65,24 @@ function PracticePage() {
 
   const poolKey = pool.map((e) => e.id).join(",");
   useLayoutEffect(() => {
-    setOrder(shuffle(poolKey ? poolKey.split(",") : []));
+    const ids = poolKey ? poolKey.split(",") : [];
+    const byId = new Map(pool.map((e) => [e.id, e]));
+    const hotRules = new Set(
+      weakPointsOf(attempts)
+        .filter((w) => w.n >= 2 && w.accuracy < 0.75)
+        .slice(0, 2)
+        .map((w) => w.rule),
+    );
+    const hot = ids.filter((eid) => {
+      const ex = byId.get(eid);
+      return Boolean(ex?.rule && hotRules.has(ex.rule));
+    });
+    const cold = ids.filter((eid) => !hot.includes(eid));
+    setOrder([...shuffle(hot), ...shuffle(cold)]);
     setIdx(0);
     setCorrectN(0);
+    // attempts are read once per lesson/pool so answering does not reshuffle
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [id, poolKey]);
 
   if (!lesson) {
@@ -156,7 +172,7 @@ function ExerciseView({
 }: {
   ex: Exercise;
   src?: string | null;
-  lesson: { segments: { text: string; start: number; end: number }[] };
+  lesson: { segments: Segment[] };
   onAnswer: (ok: boolean) => void;
   onSkip: () => void;
 }) {
@@ -186,6 +202,20 @@ function ExerciseView({
         src={src}
         start={seg?.start}
         end={seg?.end}
+        rate={ex.rate}
+        onAnswer={onAnswer}
+      />
+    );
+  }
+  if (ex.kind === "disfluency") {
+    return (
+      <DisfluencyTap
+        expected={expected}
+        target={ex.target}
+        words={seg?.words ?? []}
+        src={src}
+        start={seg?.start}
+        end={seg?.end}
         onAnswer={onAnswer}
       />
     );
@@ -196,7 +226,20 @@ function ExerciseView({
   if (ex.kind === "transform") {
     return <Transform expected={expected} target={ex.target} onAnswer={onAnswer} />;
   }
-  if (ex.kind === "repeat" || ex.kind === "shadow") {
+  if (ex.kind === "shadow") {
+    return (
+      <Shadow
+        target={ex.target}
+        expected={expected}
+        src={src}
+        start={seg?.start}
+        end={seg?.end}
+        onAnswer={onAnswer}
+        onSkip={onSkip}
+      />
+    );
+  }
+  if (ex.kind === "repeat") {
     return <Repeat target={ex.target} expected={expected} src={src} start={seg?.start} end={seg?.end} onAnswer={onAnswer} onSkip={onSkip} />;
   }
   return (
@@ -265,6 +308,7 @@ function Choices({
   src,
   start,
   end,
+  rate,
   onAnswer,
 }: {
   options: string[];
@@ -273,6 +317,7 @@ function Choices({
   src?: string | null;
   start?: number;
   end?: number;
+  rate?: number;
   onAnswer: (ok: boolean) => void;
 }) {
   const optionKey = options.join("\0");
@@ -288,7 +333,9 @@ function Choices({
 
   return (
     <Card className="flex flex-col gap-3 p-4">
-      {target ? <PlayButton text={target} src={src} start={start} end={end} label="Play" /> : null}
+      {target ? (
+        <PlayButton text={target} src={src} start={start} end={end} rate={rate ?? 0.92} label={rate ? `Play ${rate}×` : "Play"} />
+      ) : null}
       <div className="flex flex-col gap-2">
         {order.map((o, i) => {
           const mine = picked === o;
@@ -315,6 +362,65 @@ function Choices({
         <>
           <p className={pickedOk ? "text-good" : "text-destructive"}>
             {pickedOk ? "That's right." : "Not this time."}
+          </p>
+          <Button onClick={() => onAnswer(pickedOk)}>Next</Button>
+        </>
+      ) : null}
+    </Card>
+  );
+}
+
+function DisfluencyTap({
+  expected,
+  target,
+  words,
+  src,
+  start,
+  end,
+  onAnswer,
+}: {
+  expected: string;
+  target: string;
+  words: Segment["words"];
+  src?: string | null;
+  start?: number;
+  end?: number;
+  onAnswer: (ok: boolean) => void;
+}) {
+  const [picked, setPicked] = useState<string | null>(null);
+  const tiles = words.length ? words.map((w) => w.text) : tokenizeDutch(target);
+  const pickedOk = picked !== null && choiceIsCorrect(picked, expected);
+
+  return (
+    <Card className="flex flex-col gap-3 p-4">
+      <PlayButton text={target} src={src} start={start} end={end} label="Play line" />
+      <p className="text-sm text-muted-foreground">Tap the hesitation, restart, or repair.</p>
+      <div className="flex flex-wrap gap-2">
+        {tiles.map((t, i) => {
+          const mine = picked === t;
+          return (
+            <button
+              key={`${t}-${i}`}
+              type="button"
+              disabled={picked !== null}
+              onClick={() => setPicked(t)}
+              className={cn(
+                "min-h-11 rounded-[var(--radius-sm)] px-3 text-sm",
+                "bg-muted",
+                mine && pickedOk && "bg-good/15 text-good",
+                mine && !pickedOk && "bg-destructive/10 text-destructive",
+                mine && "ring-2 ring-foreground/20",
+              )}
+            >
+              {t}
+            </button>
+          );
+        })}
+      </div>
+      {picked ? (
+        <>
+          <p className={pickedOk ? "text-good" : "text-destructive"}>
+            {pickedOk ? "That's the hitch." : `The hesitation was ${expected}.`}
           </p>
           <Button onClick={() => onAnswer(pickedOk)}>Next</Button>
         </>
@@ -432,12 +538,12 @@ function Transform({
   );
 }
 
-function Repeat({
+function Shadow({
   target,
   expected,
   src,
-  start: clipStart,
-  end: clipEnd,
+  start,
+  end,
   onAnswer,
   onSkip,
 }: {
@@ -448,6 +554,64 @@ function Repeat({
   end?: number;
   onAnswer: (ok: boolean) => void;
   onSkip: () => void;
+}) {
+  const [step, setStep] = useState<0 | 1 | 2>(0);
+  return (
+    <Card className="flex flex-col gap-3 p-4">
+      <p className="text-xs font-medium uppercase tracking-wider text-muted-foreground">
+        {step === 0 ? "1 / 3 · slow" : step === 1 ? "2 / 3 · normal" : "3 / 3 · speak"}
+      </p>
+      <p className="font-display text-xl" lang="nl">
+        {target}
+      </p>
+      {step < 2 ? (
+        <>
+          <PlayButton
+            text={target}
+            src={src}
+            start={start}
+            end={end}
+            rate={step === 0 ? 0.75 : 1}
+            label={step === 0 ? "Play 0.75×" : "Play 1.0×"}
+          />
+          <Button onClick={() => setStep(step === 0 ? 1 : 2)}>
+            {step === 0 ? "Heard it slow" : "Ready to speak"}
+          </Button>
+        </>
+      ) : (
+        <Repeat
+          target={target}
+          expected={expected}
+          src={src}
+          start={start}
+          end={end}
+          onAnswer={onAnswer}
+          onSkip={onSkip}
+          hidePrompt
+        />
+      )}
+    </Card>
+  );
+}
+
+function Repeat({
+  target,
+  expected,
+  src,
+  start: clipStart,
+  end: clipEnd,
+  onAnswer,
+  onSkip,
+  hidePrompt = false,
+}: {
+  target: string;
+  expected: string;
+  src?: string | null;
+  start?: number;
+  end?: number;
+  onAnswer: (ok: boolean) => void;
+  onSkip: () => void;
+  hidePrompt?: boolean;
 }) {
   const [heard, setHeard] = useState("");
   const [listening, setListening] = useState(false);
@@ -468,9 +632,9 @@ function Repeat({
   const score = heard ? scoreTranscript(expected, heard) : 0;
 
   return (
-    <Card className="flex flex-col gap-3 p-4">
-      <p className="font-display text-xl" lang="nl">{target}</p>
-      <PlayButton text={target} src={src} start={clipStart} end={clipEnd} label="Listen" />
+    <Card className={hidePrompt ? "flex flex-col gap-3 border-0 p-0 shadow-none" : "flex flex-col gap-3 p-4"}>
+      {hidePrompt ? null : <p className="font-display text-xl" lang="nl">{target}</p>}
+      {hidePrompt ? null : <PlayButton text={target} src={src} start={clipStart} end={clipEnd} label="Listen" />}
       {can ? (
         <Button variant={listening ? "primary" : "secondary"} onClick={beginListen}>
           <Mic className="size-4" />

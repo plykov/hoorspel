@@ -123,6 +123,7 @@ export type ExerciseKind =
   | "gapfill"
   | "reduction"
   | "comprehension"
+  | "disfluency"
   | "repeat"
   | "shadow"
   | "wordorder"
@@ -140,6 +141,7 @@ export type Exercise = {
   span_start?: number;
   rule?: RuleId;
   must_use?: string[];
+  rate?: number;
 };
 
 export type LessonCardSeed = {

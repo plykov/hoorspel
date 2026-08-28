@@ -132,6 +132,41 @@ export function assembleFromSegments(
       answer: joinDutch(tokenizeDutch(first.text)),
       span_start: first.start,
     });
+    exercises.push({
+      id: "ex-shadow",
+      skill: "speaking",
+      kind: "shadow",
+      prompt: "Shadow this line: slow, then normal, then speak.",
+      target: joinDutch(tokenizeDutch(first.text)),
+      answer: joinDutch(tokenizeDutch(first.text)),
+      span_start: first.start,
+    });
+    const hesitation = first.words.find((w) => w.disfluency) ?? segments.flatMap((s) => s.words).find((w) => w.disfluency);
+    if (hesitation) {
+      const host = segments.find((s) => s.words.some((w) => w === hesitation)) ?? first;
+      exercises.push({
+        id: "ex-disf",
+        skill: "listening",
+        kind: "disfluency",
+        prompt: "Tap the hesitation or restart.",
+        target: host.text,
+        answer: hesitation.text,
+        span_start: host.start,
+      });
+    }
+    const clitic = segments.flatMap((s) => s.words).find((w) => /^['’]m$/i.test(w.text.replace(/[.,!?]$/, "")));
+    if (clitic) {
+      exercises.push({
+        id: "ex-red",
+        skill: "listening",
+        kind: "reduction",
+        prompt: "You heard a reduced object pronoun. Which citation form was it?",
+        target: clitic.text,
+        answer: "hem",
+        options: shuffle(["hem", "haar", "het", "er"]),
+        span_start: clitic.start,
+      });
+    }
   }
   if (vocabulary[0] && first) {
     const word = vocabulary[0].dutch;
@@ -180,6 +215,17 @@ export function assembleFromSegments(
       target: last.text,
       answer: last.text,
       span_start: last.start,
+    });
+    exercises.push({
+      id: "ex-speed",
+      skill: "listening",
+      kind: "comprehension",
+      prompt: "Play at 1.25×. What did they say at the end?",
+      target: last.text,
+      answer: last.text,
+      options: shuffle([last.text, first?.text ?? "Ze gaan naar huis.", "Niemand zegt iets."]),
+      span_start: last.start,
+      rate: 1.25,
     });
   }
 

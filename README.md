@@ -8,7 +8,8 @@ Install it, pick a clip from the shelf, or import your own recording. Trim to th
 
 ## Features
 
-- Curated shelf of licence-cleared everyday Dutch dialogue
+- Curated shelf of licence-cleared everyday Dutch dialogue, filterable by level, length, speakers, setting, speed and licence
+- Shadowing with a 0.75× → 1.0× → speak ladder, plus a 1.25× comprehension rung
 - Import from file, in-app recording, direct media URL, or the OS share sheet (Web Share Target)
 - Client-side trim, speech-energy check, and EU / on-device / fastest residency choice
 - Word-aligned transcript with disfluencies kept on purpose

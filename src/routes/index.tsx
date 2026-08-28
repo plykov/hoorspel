@@ -117,7 +117,7 @@ function Home() {
           <p className="mt-1 font-display text-xl">{RULE_NAMES[weak[0].rule]}</p>
           <p className="text-sm tabular text-muted-foreground">{weakSentence(weak[0])}</p>
           <Button asChild variant="secondary" className="mt-3">
-            <Link to="/clip/$id" params={{ id: suggestion.lesson_id }}>
+            <Link to="/lesson/$id" params={{ id: suggestion.lesson_id }}>
               Practise that
             </Link>
           </Button>

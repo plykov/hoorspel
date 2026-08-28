@@ -1,5 +1,6 @@
 import type { Lesson } from "@/lib/types";
 import { buildLine } from "./build-line";
+import { MORE_SHELF } from "./shelf-more";
 
 const CC = {
   spdx: "CC-BY-4.0",
@@ -138,6 +139,7 @@ export const SHELF: Lesson[] = [
       { id: "e5", skill: "speaking", kind: "repeat", prompt: "Repeat the baker’s opener.", target: "Goedemorgen, zegt u het maar.", answer: "Goedemorgen, zegt u het maar.", span_start: 0.4 },
       { id: "e6", skill: "language", kind: "wordorder", prompt: "Put this request in Dutch order.", target: "Wilt u er nog iets bij?", answer: "Wilt u er nog iets bij?", options: ["Wilt", "u", "er", "nog", "iets", "bij?"], rule: "G5" },
       { id: "e7", skill: "language", kind: "transform", prompt: "Make this blunt line polite, starting with Mag ik.", target: "Geef mij twee bolletjes.", answer: "Mag ik twee bolletjes?", rule: "G9" },
+      { id: "e8", skill: "listening", kind: "disfluency", prompt: "Tap the hesitation in the customer’s second line.", target: "Eh… ja, een zakje appelflappen, alstublieft.", answer: "Eh…", span_start: 11.4 },
     ],
     cards: [
       { id: "cb1", kind: "word", front: "het bolletje", back: "roll · diminutive · always het", audio_start: 4.8 },
@@ -744,11 +746,44 @@ export const SHELF: Lesson[] = [
       validator_report: { span: "pass", detection: "pass", lexicon: "pass", gloss: "pass", answer_key: "pass", level: "pass", attribution: "pass", dropped_items: 0, notes: [] },
     },
   },
+  ...MORE_SHELF,
 ];
 
 export function getLesson(id: string): Lesson | undefined {
   return SHELF.find((l) => l.lesson_id === id);
 }
 
-export const PACKS = ["At the counter", "Making an appointment", "On the phone", "Getting around", "Small talk", "At home", "At work", "Food"];
-export const SETTINGS = ["bakery", "phone", "station", "family", "workplace", "shopping"] as const;
+export const PACKS = [
+  "At the counter",
+  "Making an appointment",
+  "On the phone",
+  "Getting around",
+  "Small talk",
+  "At home",
+  "At work",
+  "Food",
+  "Health",
+];
+export const SETTINGS = [
+  "bakery",
+  "phone",
+  "station",
+  "family",
+  "workplace",
+  "shopping",
+  "doctor",
+  "cafe",
+  "smalltalk",
+] as const;
+
+export const SETTING_LABELS: Record<(typeof SETTINGS)[number], string> = {
+  bakery: "Bakery",
+  phone: "Phone",
+  station: "Station",
+  family: "Family",
+  workplace: "Work",
+  shopping: "Shopping",
+  doctor: "Doctor",
+  cafe: "Café",
+  smalltalk: "Small talk",
+};

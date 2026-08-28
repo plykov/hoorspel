@@ -2,6 +2,7 @@ import { createFileRoute, Link } from "@tanstack/react-router";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { RESIDENCY_COPY, useHoorspel } from "@/lib/store";
+import { withBase } from "@/lib/base";
 import type { Cefr, ResidencyPref } from "@/lib/types";
 import { cn } from "@/lib/utils";
 
@@ -13,6 +14,7 @@ function SettingsPage() {
   const dark = useHoorspel((s) => s.dark);
   const toggleDark = useHoorspel((s) => s.toggleDark);
   const resetAll = useHoorspel((s) => s.resetAll);
+  const clearRecordings = useHoorspel((s) => s.clearRecordings);
   const exportData = useHoorspel((s) => s.exportData);
 
   function download() {
@@ -109,7 +111,7 @@ function SettingsPage() {
           it is installed, share an audio file from another app and it opens here as an import.
         </p>
         <Button asChild variant="secondary">
-          <a href="/?install=1">Add to home screen</a>
+          <a href={withBase("?install=1")}>Add to home screen</a>
         </Button>
       </Card>
 
@@ -120,6 +122,16 @@ function SettingsPage() {
         </p>
         <Button variant="secondary" onClick={download}>
           Export my data
+        </Button>
+        <Button
+          variant="secondary"
+          onClick={() => {
+            if (confirm("Delete imported recordings and their lessons on this device? Shelf clips stay.")) {
+              clearRecordings();
+            }
+          }}
+        >
+          Delete my recordings
         </Button>
         <Button
           variant="destructive"

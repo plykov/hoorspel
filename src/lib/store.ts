@@ -65,6 +65,7 @@ type State = {
   toggleFlag: (lessonId: string, id: string) => void;
   toggleDark: () => void;
   resetAll: () => void;
+  clearRecordings: () => void;
   exportData: () => string;
 };
 
@@ -240,6 +241,21 @@ export const useHoorspel = create<State>()(
           attempts: [],
           progress: {},
           bookmarks: [],
+        });
+      },
+      clearRecordings: () => {
+        const drop = new Set(
+          get()
+            .imported.filter((l) => l.source_type === "import")
+            .map((l) => l.lesson_id),
+        );
+        void clearAllMedia();
+        set({
+          imported: get().imported.filter((l) => !drop.has(l.lesson_id)),
+          cards: get().cards.filter((c) => !drop.has(c.lesson_id)),
+          progress: Object.fromEntries(
+            Object.entries(get().progress).filter(([id]) => !drop.has(id)),
+          ),
         });
       },
       exportData: () =>
