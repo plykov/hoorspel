@@ -126,6 +126,7 @@ export type ExerciseKind =
   | "disfluency"
   | "repeat"
   | "shadow"
+  | "roleplay"
   | "wordorder"
   | "transform";
 

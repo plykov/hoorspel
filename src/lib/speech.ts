@@ -136,4 +136,31 @@ export function scoreTranscript(expected: string, heard: string): number {
   return Math.round((hit / a.length) * 100);
 }
 
+/** Word overlap, coverage, and timing — not recogniser confidence. */
+export function scoreSpeaking(
+  expected: string,
+  heard: string,
+  opts?: { expectedMs?: number; actualMs?: number },
+): { accuracy: number; fluency: number; completeness: number } {
+  const accuracy = scoreTranscript(expected, heard);
+  const need = expected
+    .toLowerCase()
+    .replace(/[^\p{L}\s]/gu, "")
+    .split(/\s+/)
+    .filter(Boolean);
+  const got = heard
+    .toLowerCase()
+    .replace(/[^\p{L}\s]/gu, "")
+    .split(/\s+/)
+    .filter(Boolean);
+  const completeness = need.length ? Math.min(100, Math.round((got.length / need.length) * 100)) : 0;
+  let fluency = heard ? 72 : 0;
+  if (opts?.expectedMs && opts.expectedMs > 250 && opts.actualMs && opts.actualMs > 200) {
+    const ratio = opts.actualMs / opts.expectedMs;
+    const slack = ratio < 0.75 ? 0.75 - ratio : ratio > 1.35 ? ratio - 1.35 : 0;
+    fluency = Math.max(18, Math.min(100, Math.round(100 - slack * 90)));
+  }
+  return { accuracy, fluency, completeness };
+}
+
 void voicesReady;

@@ -4,7 +4,8 @@ import { PlayButton } from "@/components/player";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
-import { hasSpeechRecognition, recognizeDutch, scoreTranscript } from "@/lib/speech";
+import { hasSpeechRecognition, recognizeDutch, scoreSpeaking, scoreTranscript } from "@/lib/speech";
+import { envelopeFromText, resample, ScoreMeters, WaveRow } from "@/components/waveform";
 import { useMediaUrl } from "@/lib/media";
 import { lessonById, useHoorspel, weakPointsOf } from "@/lib/store";
 import type { Exercise, Segment } from "@/lib/types";
@@ -99,13 +100,14 @@ function PracticePage() {
     return null;
   }
 
-  function finish(correct: boolean, rule?: Exercise["rule"]) {
+  function finish(correct: boolean, rule?: Exercise["rule"], score?: number) {
     if (!ex) return;
     log({
       target_id: ex.id,
       kind: "exercise",
       correct,
       rule,
+      score,
       latency_ms: Math.max(400, Date.now() - started.current),
     });
     started.current = Date.now();
@@ -150,7 +152,7 @@ function PracticePage() {
         src={src}
         lesson={current}
         onSkip={() => finish(false, ex.rule)}
-        onAnswer={(ok) => finish(ok, ex.rule)}
+        onAnswer={(ok, score) => finish(ok, ex.rule, score)}
       />
       <button
         type="button"
@@ -173,7 +175,7 @@ function ExerciseView({
   ex: Exercise;
   src?: string | null;
   lesson: { segments: Segment[] };
-  onAnswer: (ok: boolean) => void;
+  onAnswer: (ok: boolean, score?: number) => void;
   onSkip: () => void;
 }) {
   const expected = Array.isArray(ex.answer) ? ex.answer[0] : ex.answer;
@@ -225,6 +227,20 @@ function ExerciseView({
   }
   if (ex.kind === "transform") {
     return <Transform expected={expected} target={ex.target} onAnswer={onAnswer} />;
+  }
+  if (ex.kind === "roleplay") {
+    return (
+      <RolePlay
+        cue={ex.target}
+        expected={expected}
+        hint={ex.hint}
+        src={src}
+        start={seg?.start}
+        end={seg?.end}
+        onAnswer={onAnswer}
+        onSkip={onSkip}
+      />
+    );
   }
   if (ex.kind === "shadow") {
     return (
@@ -442,13 +458,14 @@ function WordOrder({
   const [pool, setPool] = useState<string[]>([]);
   const [built, setBuilt] = useState<string[]>([]);
   const [checked, setChecked] = useState<boolean | null>(null);
+  const [fails, setFails] = useState(0);
 
   useLayoutEffect(() => {
     setPool(shuffleWordOrder(tokenKey ? tokenKey.split("\0") : []));
     setBuilt([]);
     setChecked(null);
+    setFails(0);
   }, [tokenKey]);
-
   const joined = joinDutch(built);
   const ok = sameDutch(joined, expected);
 
@@ -494,16 +511,30 @@ function WordOrder({
         <Button disabled={!built.length} onClick={() => setChecked(ok)}>
           Check
         </Button>
+      ) : ok ? (
+        <>
+          <p className="text-good">Right order.</p>
+          <Button onClick={() => onAnswer(true)}>Next</Button>
+        </>
+      ) : fails < 1 ? (
+        <>
+          <p className="text-destructive">Not yet. Try once more.</p>
+          <Button
+            variant="secondary"
+            onClick={() => {
+              setFails((n) => n + 1);
+              setChecked(null);
+            }}
+          >
+            Try again
+          </Button>
+        </>
       ) : (
         <>
-          {ok ? (
-            <p className="text-good">Right order.</p>
-          ) : (
-            <p className="text-destructive" lang="nl">
-              {joinDutch(tokenizeDutch(expected))}
-            </p>
-          )}
-          <Button onClick={() => onAnswer(ok)}>Next</Button>
+          <p className="text-destructive" lang="nl">
+            {joinDutch(tokenizeDutch(expected))}
+          </p>
+          <Button onClick={() => onAnswer(false)}>Next</Button>
         </>
       )}
     </Card>
@@ -552,7 +583,7 @@ function Shadow({
   src?: string | null;
   start?: number;
   end?: number;
-  onAnswer: (ok: boolean) => void;
+  onAnswer: (ok: boolean, score?: number) => void;
   onSkip: () => void;
 }) {
   const [step, setStep] = useState<0 | 1 | 2>(0);
@@ -594,6 +625,52 @@ function Shadow({
   );
 }
 
+function RolePlay({
+  cue,
+  expected,
+  hint,
+  src,
+  start,
+  end,
+  onAnswer,
+  onSkip,
+}: {
+  cue: string;
+  expected: string;
+  hint?: string;
+  src?: string | null;
+  start?: number;
+  end?: number;
+  onAnswer: (ok: boolean, score?: number) => void;
+  onSkip: () => void;
+}) {
+  const [heardCue, setHeardCue] = useState(false);
+  return (
+    <Card className="flex flex-col gap-3 p-4">
+      <p className="text-xs font-medium uppercase tracking-wider text-muted-foreground">They say</p>
+      <p className="font-display text-xl" lang="nl">
+        {cue}
+      </p>
+      <PlayButton
+        text={cue}
+        src={src}
+        start={start}
+        end={end}
+        label="Play their line"
+        onEnd={() => setHeardCue(true)}
+      />
+      {hint ? <p className="text-sm text-muted-foreground">Your move: {hint}</p> : null}
+      {heardCue ? (
+        <Repeat target={expected} expected={expected} onAnswer={onAnswer} onSkip={onSkip} hidePrompt />
+      ) : (
+        <Button variant="secondary" onClick={() => setHeardCue(true)}>
+          Ready to answer
+        </Button>
+      )}
+    </Card>
+  );
+}
+
 function Repeat({
   target,
   expected,
@@ -609,49 +686,131 @@ function Repeat({
   src?: string | null;
   start?: number;
   end?: number;
-  onAnswer: (ok: boolean) => void;
+  onAnswer: (ok: boolean, score?: number) => void;
   onSkip: () => void;
   hidePrompt?: boolean;
 }) {
   const [heard, setHeard] = useState("");
   const [listening, setListening] = useState(false);
+  const [attempt, setAttempt] = useState<number[]>([]);
+  const [actualMs, setActualMs] = useState(0);
+  const stopRef = useRef<(() => void) | null>(null);
+  const startedAt = useRef(0);
   const can = hasSpeechRecognition();
+  const reference = useMemo(() => envelopeFromText(expected || target), [expected, target]);
+  const expectedMs = clipStart != null && clipEnd != null && clipEnd > clipStart
+    ? (clipEnd - clipStart) * 1000
+    : tokenizeDutch(expected).length * 320;
 
-  function beginListen() {
+  useEffect(() => () => stopRef.current?.(), []);
+
+  async function beginSpeak() {
+    if (listening) return;
     setListening(true);
     setHeard("");
-    const stop = recognizeDutch((text, final) => {
-      setHeard(text);
-      if (final) {
-        setListening(false);
-        stop();
-      }
-    });
+    setAttempt([]);
+    startedAt.current = Date.now();
+    const samples: number[] = [];
+    let recStop = () => {};
+    let recogStop = () => {};
+
+    if (can) {
+      recogStop = recognizeDutch((text, final) => {
+        setHeard(text);
+        if (final) recogStop();
+      });
+    }
+
+    try {
+      const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+      const ctx = new AudioContext();
+      const source = ctx.createMediaStreamSource(stream);
+      const analyser = ctx.createAnalyser();
+      analyser.fftSize = 256;
+      source.connect(analyser);
+      const data = new Uint8Array(analyser.fftSize);
+      const timer = window.setInterval(() => {
+        analyser.getByteTimeDomainData(data);
+        let sum = 0;
+        for (let i = 0; i < data.length; i += 1) {
+          const v = (data[i]! - 128) / 128;
+          sum += v * v;
+        }
+        samples.push(Math.min(1, Math.sqrt(sum / data.length) * 3.5));
+      }, 40);
+      recStop = () => {
+        window.clearInterval(timer);
+        stream.getTracks().forEach((t) => t.stop());
+        void ctx.close();
+      };
+    } catch {
+      recStop = () => {};
+    }
+
+    const stop = () => {
+      recogStop();
+      recStop();
+      setAttempt(resample(samples, 28));
+      setActualMs(Date.now() - startedAt.current);
+      setListening(false);
+      stopRef.current = null;
+    };
+    stopRef.current = stop;
+    window.setTimeout(() => {
+      if (stopRef.current === stop) stop();
+    }, 8000);
   }
 
-  const score = heard ? scoreTranscript(expected, heard) : 0;
+  function endSpeak() {
+    stopRef.current?.();
+  }
+
+  const scores = scoreSpeaking(expected, heard, { expectedMs, actualMs });
+  const ready = Boolean(heard) || attempt.some((v) => v > 0.12);
 
   return (
     <Card className={hidePrompt ? "flex flex-col gap-3 border-0 p-0 shadow-none" : "flex flex-col gap-3 p-4"}>
       {hidePrompt ? null : <p className="font-display text-xl" lang="nl">{target}</p>}
       {hidePrompt ? null : <PlayButton text={target} src={src} start={clipStart} end={clipEnd} label="Listen" />}
-      {can ? (
-        <Button variant={listening ? "primary" : "secondary"} onClick={beginListen}>
-          <Mic className="size-4" />
-          {listening ? "Listening…" : "Hold to speak (tap)"}
-        </Button>
-      ) : (
+      <WaveRow values={reference} label="Reference" tone="ref" />
+      <WaveRow values={attempt.length ? attempt : Array.from({ length: 28 }, () => 0.08)} label="Your attempt" tone="mine" />
+      <Button
+        variant={listening ? "primary" : "secondary"}
+        onPointerDown={(e) => {
+          e.preventDefault();
+          void beginSpeak();
+        }}
+        onPointerUp={endSpeak}
+        onPointerCancel={endSpeak}
+      >
+        <Mic className="size-4" />
+        {listening ? "Listening…" : "Hold to speak"}
+      </Button>
+      {!can ? (
         <p className="text-sm text-muted-foreground">
-          Speech recognition is not available in this browser. Play, repeat out loud, then continue.
-        </p>
-      )}
-      {heard ? (
-        <p className="text-sm">
-          Heard: {heard} · {score}%
+          Speech recognition is not available in this browser. The waveform still records if the mic is allowed.
         </p>
       ) : null}
+      {heard ? <p className="text-sm">Heard: {heard}</p> : null}
+      {ready ? <ScoreMeters accuracy={scores.accuracy} fluency={scores.fluency} completeness={scores.completeness} /> : null}
       <div className="flex gap-2">
-        <Button onClick={() => onAnswer(score >= 55 || !can)}>{can ? "Next" : "I said it"}</Button>
+        <Button
+          onClick={() => onAnswer(scores.accuracy >= 55 || !can, heard ? scores.accuracy : undefined)}
+        >
+          {can || ready ? "Next" : "I said it"}
+        </Button>
+        {ready ? (
+          <Button
+            variant="secondary"
+            onClick={() => {
+              setHeard("");
+              setAttempt([]);
+              setActualMs(0);
+            }}
+          >
+            Try again
+          </Button>
+        ) : null}
         <Button variant="ghost" onClick={onSkip}>
           Skip
         </Button>

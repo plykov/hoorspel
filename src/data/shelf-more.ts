@@ -589,6 +589,7 @@ export const MORE_SHELF: Lesson[] = [
       { id: "e3", skill: "listening", kind: "reduction", prompt: "You heard a reduced object. Which citation form was it?", target: "Ik haal 'm zo bij de bar.", answer: "hem", options: ["hem", "haar", "het", "er"], span_start: 23.4 },
       { id: "e4", skill: "language", kind: "wordorder", prompt: "Split aanschuiven around maar.", target: "schuif maar aan", answer: "schuif maar aan", options: ["schuif", "maar", "aan"], rule: "G3" },
       { id: "e5", skill: "speaking", kind: "shadow", prompt: "Shadow the coffee offer.", target: "Zal ik even een kopje koffie voor je meenemen?", answer: "Zal ik even een kopje koffie voor je meenemen?", span_start: 6.6 },
+      { id: "e7", skill: "speaking", kind: "roleplay", prompt: "You are Bram. Someone asks if the bench is free.", target: "Zeg, is hier nog plek?", answer: "Ja hoor, schuif maar aan.", hint: "Yes — tell them to slide in.", span_start: 0.3 },
       { id: "e6", skill: "listening", kind: "comprehension", prompt: "Play at 1.25×. Where does Isa fetch the coffee?", target: "Ik haal 'm zo bij de bar.", answer: "bij de bar", options: ["bij de bar", "in de keuken", "om de hoek", "thuis"], rate: 1.25 },
     ],
     cards: [

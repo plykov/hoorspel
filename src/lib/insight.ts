@@ -35,6 +35,12 @@ export function listeningIndex(attempts: Attempt[]): number | null {
   return Math.round((100 * list.filter((a) => a.correct).length) / list.length);
 }
 
+export function speakingScore(attempts: Attempt[]): number | null {
+  const list = attempts.filter((a) => a.kind === "exercise" && typeof a.score === "number");
+  if (list.length < 3) return null;
+  return Math.round(list.reduce((n, a) => n + (a.score ?? 0), 0) / list.length);
+}
+
 export function cardsKnown(cards: StoredCard[]): number {
   return cards.filter((c) => c.reps > 0 && c.state >= 2).length;
 }

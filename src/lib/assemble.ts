@@ -167,6 +167,19 @@ export function assembleFromSegments(
         span_start: clitic.start,
       });
     }
+    const second = segments[1];
+    if (second && first.speaker !== second.speaker) {
+      exercises.push({
+        id: "ex-role",
+        skill: "speaking",
+        kind: "roleplay",
+        prompt: `You are speaker ${second.speaker}. Answer after you hear ${first.speaker}.`,
+        target: joinDutch(tokenizeDutch(first.text)),
+        answer: joinDutch(tokenizeDutch(second.text)),
+        hint: second.translation || undefined,
+        span_start: first.start,
+      });
+    }
   }
   if (vocabulary[0] && first) {
     const word = vocabulary[0].dutch;

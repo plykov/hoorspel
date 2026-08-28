@@ -281,8 +281,8 @@ function LessonPage() {
             {lesson.exercises.filter((e) => !e.rule || !droppedG.has(e.rule)).length} exercises
           </p>
           <p className="mt-1 text-sm text-muted-foreground">
-            Dictation, gap-fill, word order, comprehension, repeat. Order is shuffled. Cards join your
-            review queue. Dropped words and grammar stay out.
+            Dictation, gap-fill, shadowing, role-play, word order. Weak grammar floats to the front.
+            Cards join your review queue. Dropped words and grammar stay out.
           </p>
           <ul className="mt-3 list-disc space-y-1 pl-5 text-sm text-muted-foreground">
             {lesson.exercises

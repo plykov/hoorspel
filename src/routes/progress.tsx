@@ -7,6 +7,7 @@ import {
   lessonTitle,
   listeningIndex,
   minutesFromAttempts,
+  speakingScore,
   streakOf,
   weakSentence,
 } from "@/lib/insight";
@@ -26,6 +27,7 @@ function ProgressPage() {
   const correct = attempts.filter((a) => a.correct).length;
   const known = cardsKnown(cards);
   const listen = listeningIndex(attempts);
+  const speak = speakingScore(attempts);
   const today = minutesFromAttempts(attempts);
   const streak = streakOf(attempts);
   const bands = knownByBand(imported, cards);
@@ -43,12 +45,13 @@ function ProgressPage() {
         <Stat label="Due" value={due.length} />
         <Stat label="Cards known" value={known} />
       </div>
-      <div className="grid grid-cols-2 gap-3">
+      <div className="grid grid-cols-3 gap-3">
         <Stat
           label="Correct"
           value={attempts.length ? `${Math.round((correct / attempts.length) * 100)}%` : "—"}
         />
         <Stat label="Listening index" value={listen == null ? "Need 4 tries" : `${listen}`} />
+        <Stat label="Speaking" value={speak == null ? "Need 3 tries" : `${speak}`} />
       </div>
 
       <Card className="p-4">

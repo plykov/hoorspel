@@ -7,6 +7,7 @@ import { Rating, previewIntervals } from "@/lib/fsrs";
 import type { Grade } from "ts-fsrs";
 import { dueCardsOf, lessonById, useHoorspel } from "@/lib/store";
 import { useMediaUrl } from "@/lib/media";
+import { formatTime } from "@/lib/utils";
 
 export const Route = createFileRoute("/review")({ component: ReviewPage });
 
@@ -49,6 +50,14 @@ function ReviewPage() {
     setFlipped(false);
   }
 
+  const audioFirst = card.seed.kind === "clip" || card.seed.kind === "pronunciation";
+  const playStart = card.seed.audio_start ?? 0;
+  const playEnd = card.seed.audio_end ?? (card.seed.kind === "clip" ? lesson?.duration_s : playStart + 4);
+  const playText =
+    lesson?.segments.find((s) => s.start >= playStart)?.text ??
+    lesson?.segments[0]?.text ??
+    card.seed.front;
+
   return (
     <div className="flex flex-col gap-5">
       <p className="text-xs font-medium uppercase tracking-wider text-muted-foreground">
@@ -56,22 +65,30 @@ function ReviewPage() {
       </p>
       <Card className="flex min-h-56 flex-col items-center justify-center gap-4 p-6 text-center">
         <p className="text-xs uppercase tracking-wider text-muted-foreground">{card.seed.kind}</p>
-        <p className="font-display text-3xl">{card.seed.front}</p>
-        {card.seed.audio_start != null && lesson ? (
+        <p className="font-display text-3xl">
+          {audioFirst && !flipped
+            ? card.seed.kind === "clip"
+              ? "Listen to the clip"
+              : "Listen, then say it"
+            : card.seed.front}
+        </p>
+        {lesson ? (
           <PlayButton
-            text={
-              lesson.segments.find((s) => s.start >= (card.seed.audio_start ?? 0))?.text ??
-              lesson.segments[0]?.text ??
-              card.seed.front
-            }
+            text={playText}
             src={src}
-            start={card.seed.audio_start}
-            end={card.seed.audio_end ?? (card.seed.audio_start + 4)}
-            label="Hear it in context"
+            start={playStart}
+            end={playEnd}
+            label={audioFirst && !flipped ? "Hear it" : "Hear it in context"}
           />
         ) : (
           <PlayButton text={card.seed.front} src={src} label="Hear it" />
         )}
+        {lesson ? (
+          <p className="text-xs text-muted-foreground">
+            {lesson.title}
+            {card.seed.audio_start != null ? ` · ${formatTime(card.seed.audio_start)}` : ""}
+          </p>
+        ) : null}
         {flipped ? (
           <p className="max-w-prose text-muted-foreground">{card.seed.back}</p>
         ) : (

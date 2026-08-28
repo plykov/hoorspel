@@ -1,6 +1,7 @@
 import type { Lesson } from "@/lib/types";
 import { buildLine } from "./build-line";
 import { MORE_SHELF } from "./shelf-more";
+import { SPEAK_SHELF } from "./shelf-speak";
 
 const CC = {
   spdx: "CC-BY-4.0",
@@ -140,6 +141,7 @@ export const SHELF: Lesson[] = [
       { id: "e6", skill: "language", kind: "wordorder", prompt: "Put this request in Dutch order.", target: "Wilt u er nog iets bij?", answer: "Wilt u er nog iets bij?", options: ["Wilt", "u", "er", "nog", "iets", "bij?"], rule: "G5" },
       { id: "e7", skill: "language", kind: "transform", prompt: "Make this blunt line polite, starting with Mag ik.", target: "Geef mij twee bolletjes.", answer: "Mag ik twee bolletjes?", rule: "G9" },
       { id: "e8", skill: "listening", kind: "disfluency", prompt: "Tap the hesitation in the customer’s second line.", target: "Eh… ja, een zakje appelflappen, alstublieft.", answer: "Eh…", span_start: 11.4 },
+      { id: "e9", skill: "speaking", kind: "roleplay", prompt: "You are the customer. Answer the baker.", target: "Goedemorgen, zegt u het maar.", answer: "Goedemorgen. Mag ik twee bruine bolletjes en een krentenbol?", hint: "Order two brown rolls and a currant bun.", span_start: 0.4 },
     ],
     cards: [
       { id: "cb1", kind: "word", front: "het bolletje", back: "roll · diminutive · always het", audio_start: 4.8 },
@@ -747,6 +749,7 @@ export const SHELF: Lesson[] = [
     },
   },
   ...MORE_SHELF,
+  ...SPEAK_SHELF,
 ];
 
 export function getLesson(id: string): Lesson | undefined {
