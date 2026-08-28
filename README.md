@@ -4,12 +4,14 @@ A Progressive Web App that turns authentic Dutch audio into structured listening
 
 **Live:** [plykov.github.io/hoorspel](https://plykov.github.io/hoorspel/)
 
-Install it, pick a clip from the shelf, or import your own recording. Trim to the span that matters, get a disfluency-preserving transcript, then practise with dictation, gap-fill, shadowing, role-play, word order, and an FSRS review queue that keeps the original audio on every card.
+Install it, pick a clip from the shelf, or import your own recording. Trim to the span that matters, get a disfluency-preserving transcript, then practise with dictation, gap-fill, a speed ladder, shadowing, role-play, free production, word order, and an FSRS review queue that keeps the original audio on every card.
 
 ## Features
 
 - Curated shelf of licence-cleared everyday Dutch dialogue, filterable by level, length, speakers, setting, speed and licence
+- Line-by-line listen, a 0.75× → 1.0× → 1.25× speed ladder, then a comprehension check
 - Shadowing with a 0.75× → 1.0× → speak ladder, waveform comparison, and role-play (you answer as the other speaker)
+- Free production that must use at least two target words from the clip
 - Import from file, in-app recording, direct media URL, or the OS share sheet (Web Share Target)
 - Client-side trim, speech-energy check, and EU / on-device / fastest residency choice
 - Word-aligned transcript with disfluencies kept on purpose

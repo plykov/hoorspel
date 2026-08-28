@@ -128,7 +128,9 @@ export type ExerciseKind =
   | "shadow"
   | "roleplay"
   | "wordorder"
-  | "transform";
+  | "transform"
+  | "speedladder"
+  | "produce";
 
 export type Exercise = {
   id: string;

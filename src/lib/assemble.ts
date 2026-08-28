@@ -230,16 +230,34 @@ export function assembleFromSegments(
       span_start: last.start,
     });
     exercises.push({
-      id: "ex-speed",
+      id: "ex-ladder",
       skill: "listening",
-      kind: "comprehension",
-      prompt: "Play at 1.25×. What did they say at the end?",
+      kind: "speedladder",
+      prompt: "Hear the last line at 0.75×, then 1.0×, then 1.25×. What did they say?",
       target: last.text,
       answer: last.text,
       options: shuffle([last.text, first?.text ?? "Ze gaan naar huis.", "Niemand zegt iets."]),
       span_start: last.start,
-      rate: 1.25,
     });
+    const must = vocabulary
+      .slice(0, 2)
+      .map((v) => v.dutch.replace(/^(de|het)\s+/i, ""))
+      .filter(Boolean);
+    if (must.length >= 2) {
+      exercises.push({
+        id: "ex-prod",
+        skill: "speaking",
+        kind: "produce",
+        prompt: `Say a short line that uses ${must[0]} and ${must[1]}.`,
+        target: last.text,
+        answer: must.join(" "),
+        must_use: must,
+        hint: vocabulary
+          .slice(0, 2)
+          .map((v) => `${v.dutch} — ${v.english}`)
+          .join("; "),
+      });
+    }
   }
 
   const duration = last?.end ?? 30;

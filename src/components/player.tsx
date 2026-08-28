@@ -68,6 +68,43 @@ export function playClip(
   };
 }
 
+export function playSequence(
+  lines: { text: string; src?: string | null; start: number; end?: number }[],
+  rate: number,
+  cbs: { onIndex?: (i: number) => void; onDone?: () => void },
+): () => void {
+  let i = 0;
+  let cancelled = false;
+  let childStop: (() => void) | null = null;
+
+  const next = () => {
+    if (cancelled) return;
+    const line = lines[i];
+    if (!line) {
+      cbs.onDone?.();
+      return;
+    }
+    cbs.onIndex?.(i);
+    i += 1;
+    const after = () => {
+      if (cancelled) return;
+      window.setTimeout(next, 320);
+    };
+    if (line.src) {
+      childStop = playClip(line.src, line.start, line.end, rate, { onEnd: after });
+    } else {
+      childStop = speakDutch(line.text, { rate, onEnd: after });
+    }
+  };
+  next();
+  return () => {
+    cancelled = true;
+    childStop?.();
+    stopSpeaking();
+    stopClip();
+  };
+}
+
 export function PlayButton({
   text,
   src,

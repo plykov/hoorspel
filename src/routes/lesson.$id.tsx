@@ -1,7 +1,8 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
-import { useEffect, useState } from "react";
+import { Pause, Play } from "lucide-react";
+import { useEffect, useRef, useState } from "react";
 import { Attribution } from "@/components/attribution";
-import { PlayButton, RateToggle } from "@/components/player";
+import { PlayButton, RateToggle, playSequence } from "@/components/player";
 import { Transcript } from "@/components/transcript";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -33,11 +34,54 @@ function LessonPage() {
   const [rate, setRate] = useState(profile.default_rate);
   const [span, setSpan] = useState<string | undefined>();
   const [editing, setEditing] = useState(false);
+  const [lining, setLining] = useState(false);
+  const seqStop = useRef<(() => void) | null>(null);
   const src = useMediaUrl(lesson?.media_id);
 
   useEffect(() => {
     if (lesson) enqueue(lesson);
   }, [lesson, enqueue]);
+
+  useEffect(
+    () => () => {
+      seqStop.current?.();
+    },
+    [],
+  );
+
+  function stopLines() {
+    seqStop.current?.();
+    seqStop.current = null;
+    setLining(false);
+  }
+
+  function lineByLine() {
+    if (!lesson) return;
+    if (lining) {
+      stopLines();
+      return;
+    }
+    setLining(true);
+    seqStop.current = playSequence(
+      lesson.segments.map((s) => ({
+        text: s.text,
+        src,
+        start: s.start,
+        end: s.end,
+      })),
+      rate,
+      {
+        onIndex: (i) => {
+          const line = lesson.segments[i];
+          if (line) setSpan(line.text);
+        },
+        onDone: () => {
+          setLining(false);
+          seqStop.current = null;
+        },
+      },
+    );
+  }
 
   if (!lesson) {
     return (
@@ -78,7 +122,10 @@ function LessonPage() {
             <button
               key={t}
               type="button"
-              onClick={() => setTab(t)}
+              onClick={() => {
+                if (t !== "Listen") stopLines();
+                setTab(t);
+              }}
               className={cn(
                 "h-10 shrink-0 rounded-full px-3.5 text-sm font-medium",
                 tab === t ? "bg-foreground text-background" : "bg-muted text-foreground",
@@ -99,8 +146,34 @@ function LessonPage() {
             <p className="mt-2">{lesson.orientation.blurb}</p>
             <p className="mt-2 text-sm text-muted-foreground">{lesson.orientation.gist}</p>
             <div className="mt-3 flex flex-wrap gap-2">
-              <PlayButton text={fullText} src={src} start={0} end={lesson.duration_s} rate={rate} label="Full clip" />
-              <PlayButton text={fullText} src={src} start={0} end={lesson.duration_s} rate={0.75} label="Slow" />
+              <PlayButton
+                text={fullText}
+                src={src}
+                start={0}
+                end={lesson.duration_s}
+                rate={rate}
+                label="Full clip"
+                onStart={stopLines}
+              />
+              <PlayButton
+                text={fullText}
+                src={src}
+                start={0}
+                end={lesson.duration_s}
+                rate={0.75}
+                label="Slow"
+                onStart={stopLines}
+              />
+              <Button
+                type="button"
+                variant={lining ? "primary" : "secondary"}
+                size="sm"
+                onClick={lineByLine}
+                aria-pressed={lining}
+              >
+                {lining ? <Pause className="size-4" /> : <Play className="size-4 translate-x-px" />}
+                {lining ? "Stop lines" : "Line by line"}
+              </Button>
               <Button
                 type="button"
                 variant={editing ? "primary" : "secondary"}
@@ -281,8 +354,9 @@ function LessonPage() {
             {lesson.exercises.filter((e) => !e.rule || !droppedG.has(e.rule)).length} exercises
           </p>
           <p className="mt-1 text-sm text-muted-foreground">
-            Dictation, gap-fill, shadowing, role-play, word order. Weak grammar floats to the front.
-            Cards join your review queue. Dropped words and grammar stay out.
+            Dictation, gap-fill, speed ladder, shadowing, role-play, free production, word order.
+            Weak grammar floats to the front. Cards join your review queue. Dropped words and grammar
+            stay out.
           </p>
           <ul className="mt-3 list-disc space-y-1 pl-5 text-sm text-muted-foreground">
             {lesson.exercises

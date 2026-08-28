@@ -2,6 +2,7 @@ import type { Lesson } from "@/lib/types";
 import { buildLine } from "./build-line";
 import { MORE_SHELF } from "./shelf-more";
 import { SPEAK_SHELF } from "./shelf-speak";
+import { LISTEN_SHELF } from "./shelf-listen";
 
 const CC = {
   spdx: "CC-BY-4.0",
@@ -750,6 +751,7 @@ export const SHELF: Lesson[] = [
   },
   ...MORE_SHELF,
   ...SPEAK_SHELF,
+  ...LISTEN_SHELF,
 ];
 
 export function getLesson(id: string): Lesson | undefined {

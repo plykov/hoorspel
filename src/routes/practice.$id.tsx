@@ -13,6 +13,7 @@ import {
   choiceIsCorrect,
   cn,
   joinDutch,
+  normalizeToken,
   sameDutch,
   shuffle,
   shuffleWordOrder,
@@ -209,6 +210,29 @@ function ExerciseView({
       />
     );
   }
+  if (ex.kind === "speedladder") {
+    return (
+      <SpeedLadder
+        options={ex.options ?? [expected]}
+        expected={expected}
+        target={ex.target}
+        src={src}
+        start={seg?.start}
+        end={seg?.end}
+        onAnswer={onAnswer}
+      />
+    );
+  }
+  if (ex.kind === "produce") {
+    return (
+      <Produce
+        must={ex.must_use ?? tokenizeDutch(expected).slice(0, 2)}
+        hint={ex.hint}
+        onAnswer={onAnswer}
+        onSkip={onSkip}
+      />
+    );
+  }
   if (ex.kind === "disfluency") {
     return (
       <DisfluencyTap
@@ -262,6 +286,209 @@ function ExerciseView({
     <Button onClick={() => onAnswer(true)} variant="secondary">
       Continue
     </Button>
+  );
+}
+
+const LADDER_RATES = [0.75, 1, 1.25] as const;
+
+function SpeedLadder({
+  options,
+  expected,
+  target,
+  src,
+  start,
+  end,
+  onAnswer,
+}: {
+  options: string[];
+  expected: string;
+  target: string;
+  src?: string | null;
+  start?: number;
+  end?: number;
+  onAnswer: (ok: boolean) => void;
+}) {
+  const [rung, setRung] = useState(0);
+  const [ready, setReady] = useState(false);
+  const rate = LADDER_RATES[rung] ?? 1;
+  const labels = ["slow", "normal", "fast"] as const;
+
+  if (ready) {
+    return (
+      <Choices
+        options={options}
+        expected={expected}
+        target={target}
+        src={src}
+        start={start}
+        end={end}
+        rate={1.25}
+        onAnswer={onAnswer}
+      />
+    );
+  }
+
+  return (
+    <Card className="flex flex-col gap-3 p-4">
+      <p className="text-xs font-medium uppercase tracking-wider text-muted-foreground">
+        {rung + 1} / 3 · {labels[rung]} · {rate}×
+      </p>
+      <p className="text-sm text-muted-foreground">
+        Hear it at this speed. The line stays hidden until you have climbed all three rungs.
+      </p>
+      <div className="flex gap-1" aria-hidden>
+        {LADDER_RATES.map((n, i) => (
+          <span
+            key={n}
+            className={cn(
+              "h-1.5 flex-1 rounded-full",
+              i <= rung ? "bg-foreground" : "bg-muted",
+            )}
+          />
+        ))}
+      </div>
+      <PlayButton text={target} src={src} start={start} end={end} rate={rate} label={`Play ${rate}×`} />
+      <Button
+        onClick={() => {
+          if (rung < LADDER_RATES.length - 1) setRung(rung + 1);
+          else setReady(true);
+        }}
+      >
+        {rung < LADDER_RATES.length - 1 ? "Heard it" : "What did they say?"}
+      </Button>
+    </Card>
+  );
+}
+
+function usesMust(heard: string, item: string): boolean {
+  const n = normalizeToken(item);
+  if (!n) return false;
+  const tokens = tokenizeDutch(heard).map(normalizeToken);
+  if (tokens.includes(n)) return true;
+  if (n.length >= 4) {
+    return tokens.some((t) => t.startsWith(n.slice(0, 4)) || n.startsWith(t.slice(0, Math.min(4, t.length))));
+  }
+  return tokens.some((t) => t.includes(n) || n.includes(t));
+}
+
+function Produce({
+  must,
+  hint,
+  onAnswer,
+  onSkip,
+}: {
+  must: string[];
+  hint?: string;
+  onAnswer: (ok: boolean, score?: number) => void;
+  onSkip: () => void;
+}) {
+  const [val, setVal] = useState("");
+  const [heard, setHeard] = useState("");
+  const [listening, setListening] = useState(false);
+  const [checked, setChecked] = useState<boolean | null>(null);
+  const stopRef = useRef<(() => void) | null>(null);
+  const can = hasSpeechRecognition();
+  const source = heard || val;
+  const hits = must.filter((m) => usesMust(source, m));
+  const need = Math.min(2, must.length);
+  const ok = hits.length >= need;
+  const score = must.length ? Math.round((hits.length / must.length) * 100) : 0;
+
+  useEffect(() => () => stopRef.current?.(), []);
+
+  async function beginSpeak() {
+    if (listening) return;
+    setListening(true);
+    setHeard("");
+    setChecked(null);
+    let recogStop = () => {};
+    if (can) {
+      recogStop = recognizeDutch((text, final) => {
+        setHeard(text);
+        if (final) recogStop();
+      });
+    }
+    stopRef.current = () => {
+      recogStop();
+      setListening(false);
+      stopRef.current = null;
+    };
+    window.setTimeout(() => {
+      if (stopRef.current) stopRef.current();
+    }, 8000);
+  }
+
+  function endSpeak() {
+    stopRef.current?.();
+  }
+
+  return (
+    <Card className="flex flex-col gap-3 p-4">
+      <p className="text-sm text-muted-foreground">
+        Use at least two of these. Your own sentence is fine.
+      </p>
+      <div className="flex flex-wrap gap-2">
+        {must.map((m) => (
+          <span
+            key={m}
+            lang="nl"
+            className={cn(
+              "inline-flex h-11 items-center rounded-full px-3 text-sm",
+              hits.includes(m) ? "bg-good/15 text-good" : "bg-muted",
+            )}
+          >
+            {m}
+          </span>
+        ))}
+      </div>
+      {hint ? <p className="text-sm text-muted-foreground">{hint}</p> : null}
+      <Input
+        value={val}
+        onChange={(e) => {
+          setVal(e.target.value);
+          setChecked(null);
+        }}
+        placeholder="Type a short Dutch line"
+        autoCapitalize="off"
+        autoCorrect="off"
+        lang="nl"
+      />
+      <Button
+        variant={listening ? "primary" : "secondary"}
+        onPointerDown={(e) => {
+          e.preventDefault();
+          void beginSpeak();
+        }}
+        onPointerUp={endSpeak}
+        onPointerCancel={endSpeak}
+      >
+        <Mic className="size-4" />
+        {listening ? "Listening…" : "Hold to speak"}
+      </Button>
+      {!can ? (
+        <p className="text-sm text-muted-foreground">
+          Speech recognition is not available in this browser. Type the line instead.
+        </p>
+      ) : null}
+      {heard ? <p className="text-sm">Heard: {heard}</p> : null}
+      {checked === null ? (
+        <Button disabled={!source.trim()} onClick={() => setChecked(ok)}>
+          Check
+        </Button>
+      ) : (
+        <>
+          <p className={ok ? "text-good" : "text-destructive"}>
+            {ok
+              ? `Used ${hits.join(" and ")}.`
+              : `Still need ${must.filter((m) => !hits.includes(m)).join(" and ")}.`}
+          </p>
+          <Button onClick={() => onAnswer(ok, score)}>Next</Button>
+        </>
+      )}
+      <Button variant="ghost" onClick={onSkip}>
+        Skip
+      </Button>
+    </Card>
   );
 }
 
