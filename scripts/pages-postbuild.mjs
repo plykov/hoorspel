@@ -4,11 +4,11 @@
  * copy into `.output/public`, add `.nojekyll`, and duplicate the SPA shell as
  * `404.html` so client routes like /hoorspel/shelf resolve.
  */
-import { copyFileSync, cpSync, existsSync, mkdirSync, writeFileSync } from "node:fs";
+import { copyFileSync, cpSync, existsSync, mkdirSync, rmSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 
 const TARGET = ".output/public";
-const CANDIDATES = [TARGET, "dist/client", "dist"];
+const CANDIDATES = ["dist/client", "dist", TARGET];
 
 function hasAssets(dir) {
   return (
@@ -26,6 +26,7 @@ if (!source) {
 }
 
 if (source !== TARGET) {
+  rmSync(TARGET, { recursive: true, force: true });
   mkdirSync(TARGET, { recursive: true });
   cpSync(source, TARGET, { recursive: true });
 }
