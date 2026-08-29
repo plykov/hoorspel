@@ -5,6 +5,7 @@ import {
   cardsKnown,
   knownByBand,
   lessonTitle,
+  lessonsForRule,
   listeningIndex,
   minutesFromAttempts,
   speakingScore,
@@ -75,22 +76,41 @@ function ProgressPage() {
         {weak.length === 0 ? (
           <p className="mt-2 text-sm text-muted-foreground">Practise a lesson to see a signal.</p>
         ) : (
-          <ul className="mt-3 space-y-3">
-            {weak.map((w) => (
-              <li key={w.rule}>
-                <div className="flex items-center justify-between gap-3 text-sm">
-                  <span>
-                    {w.rule} · {RULE_NAMES[w.rule]}
-                  </span>
-                  <span className="tabular text-muted-foreground">
-                    {Math.round(w.accuracy * 100)}% · {w.n}
-                  </span>
-                </div>
-                {w === weak[0] && weakSentence(w) ? (
-                  <p className="mt-1 text-sm text-muted-foreground">{weakSentence(w)}</p>
-                ) : null}
-              </li>
-            ))}
+          <ul className="mt-3 space-y-4">
+            {weak.map((w) => {
+              const recs = lessonsForRule(w.rule, imported).slice(0, 2);
+              return (
+                <li key={w.rule}>
+                  <div className="flex items-center justify-between gap-3 text-sm">
+                    <Link
+                      to="/shelf"
+                      search={{ rule: w.rule }}
+                      className="hover:text-primary"
+                    >
+                      {w.rule} · {RULE_NAMES[w.rule]}
+                    </Link>
+                    <span className="tabular text-muted-foreground">
+                      {Math.round(w.accuracy * 100)}% · {w.n}
+                    </span>
+                  </div>
+                  {w === weak[0] && weakSentence(w) ? (
+                    <p className="mt-1 text-sm text-muted-foreground">{weakSentence(w)}</p>
+                  ) : null}
+                  {recs.length ? (
+                    <p className="mt-1 text-sm">
+                      {recs.map((l, i) => (
+                        <span key={l.lesson_id}>
+                          {i > 0 ? " · " : null}
+                          <Link to="/lesson/$id" params={{ id: l.lesson_id }} className="hover:text-primary">
+                            {l.title}
+                          </Link>
+                        </span>
+                      ))}
+                    </p>
+                  ) : null}
+                </li>
+              );
+            })}
           </ul>
         )}
       </Card>

@@ -255,6 +255,7 @@ export type Attempt = {
   correct: boolean;
   score?: number;
   rule?: RuleId;
+  skill?: "listening" | "speaking" | "language";
   latency_ms: number;
 };
 

@@ -30,9 +30,11 @@ export function streakOf(attempts: Attempt[]): number {
 }
 
 export function listeningIndex(attempts: Attempt[]): number | null {
-  const list = attempts.filter((a) => a.kind === "exercise");
-  if (list.length < 4) return null;
-  return Math.round((100 * list.filter((a) => a.correct).length) / list.length);
+  const list = attempts.filter((a) => a.kind === "exercise" && (a.skill === "listening" || !a.skill));
+  const focused = attempts.filter((a) => a.skill === "listening");
+  const use = focused.length >= 4 ? focused : list;
+  if (use.length < 4) return null;
+  return Math.round((100 * use.filter((a) => a.correct).length) / use.length);
 }
 
 export function speakingScore(attempts: Attempt[]): number | null {
@@ -71,6 +73,16 @@ export function weakSentence(weak: { rule: RuleId; accuracy: number; n: number }
   if (!weak || weak.n < 2) return null;
   const pct = Math.round((1 - weak.accuracy) * 100);
   return `You miss this ${pct}% of the time across ${weak.n} tries.`;
+}
+
+export function lessonsForRule(rule: RuleId, imported: Lesson[]): Lesson[] {
+  const seen = new Set<string>();
+  const all = [...imported, ...SHELF];
+  return all.filter((l) => {
+    if (seen.has(l.lesson_id)) return false;
+    seen.add(l.lesson_id);
+    return l.grammar.some((g) => g.rule === rule);
+  });
 }
 
 export function knownByBand(imported: Lesson[], cards: StoredCard[]): { cefr: Cefr; n: number }[] {

@@ -109,6 +109,7 @@ function PracticePage() {
       correct,
       rule,
       score,
+      skill: ex.skill,
       latency_ms: Math.max(400, Date.now() - started.current),
     });
     started.current = Date.now();

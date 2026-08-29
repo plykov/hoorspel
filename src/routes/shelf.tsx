@@ -1,5 +1,5 @@
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
-import { useMemo, useState, type ReactNode } from "react";
+import { useMemo, useState, useEffect, type ReactNode } from "react";
 import { Bookmark, BookmarkCheck, Search, Shuffle } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -8,11 +8,20 @@ import { Input } from "@/components/ui/input";
 import { PlayButton } from "@/components/player";
 import { Attribution } from "@/components/attribution";
 import { PACKS, SETTINGS, SETTING_LABELS, SHELF } from "@/data/lessons";
+import { RULE_NAMES } from "@/lib/grammar";
 import { useHoorspel } from "@/lib/store";
-import type { Cefr, Setting } from "@/lib/types";
+import type { Cefr, RuleId, Setting } from "@/lib/types";
 import { cn, formatDuration } from "@/lib/utils";
 
-export const Route = createFileRoute("/shelf")({ component: ShelfPage });
+type ShelfSearch = { q?: string; rule?: RuleId };
+
+export const Route = createFileRoute("/shelf")({
+  validateSearch: (raw: Record<string, unknown>): ShelfSearch => ({
+    q: typeof raw.q === "string" ? raw.q : undefined,
+    rule: typeof raw.rule === "string" && raw.rule in RULE_NAMES ? (raw.rule as RuleId) : undefined,
+  }),
+  component: ShelfPage,
+});
 
 const LEVELS: Array<Cefr | "any"> = ["any", "A1", "A2", "B1", "B2"];
 const LENGTHS = [
@@ -40,6 +49,8 @@ const LICENCES = [
   { id: "private", label: "Private" },
 ] as const;
 
+const RULES = Object.keys(RULE_NAMES) as RuleId[];
+
 function Chip({
   active,
   onClick,
@@ -64,7 +75,8 @@ function Chip({
 }
 
 function ShelfPage() {
-  const [q, setQ] = useState("");
+  const search = Route.useSearch();
+  const [q, setQ] = useState(search.q ?? "");
   const [level, setLevel] = useState<Cefr | "any">("any");
   const [pack, setPack] = useState<string | "any">("any");
   const [length, setLength] = useState<(typeof LENGTHS)[number]["id"]>("any");
@@ -72,10 +84,16 @@ function ShelfPage() {
   const [speed, setSpeed] = useState<(typeof SPEEDS)[number]["id"]>("any");
   const [licence, setLicence] = useState<(typeof LICENCES)[number]["id"]>("any");
   const [setting, setSetting] = useState<Setting | "any">("any");
+  const [rule, setRule] = useState<RuleId | "any">(search.rule ?? "any");
   const imported = useHoorspel((s) => s.imported);
   const bookmarks = useHoorspel((s) => s.bookmarks);
   const toggle = useHoorspel((s) => s.toggleBookmark);
   const navigate = useNavigate();
+
+  useEffect(() => {
+    if (search.rule) setRule(search.rule);
+    if (search.q != null) setQ(search.q);
+  }, [search.rule, search.q]);
 
   const list = useMemo(() => {
     const seen = new Set<string>();
@@ -100,11 +118,12 @@ function ShelfPage() {
       if (licence === "cc-by" && !/CC-BY/i.test(l.licence.spdx)) return false;
       if (licence === "cc0" && !/CC0/i.test(l.licence.spdx)) return false;
       if (licence === "private" && l.licence.spdx !== "private") return false;
+      if (rule !== "any" && !l.grammar.some((g) => g.rule === rule)) return false;
       if (!q.trim()) return true;
       const hay = `${l.title} ${l.description} ${l.segments.map((s) => s.text).join(" ")}`.toLowerCase();
       return hay.includes(q.toLowerCase());
     });
-  }, [q, level, pack, length, speakers, speed, licence, setting, imported]);
+  }, [q, level, pack, length, speakers, speed, licence, setting, rule, imported]);
 
   function surprise() {
     if (!list.length) return;
@@ -192,6 +211,16 @@ function ShelfPage() {
           </Chip>
         ))}
       </div>
+      <div className="flex flex-wrap gap-2">
+        <Chip active={rule === "any"} onClick={() => setRule("any")}>
+          Any structure
+        </Chip>
+        {RULES.map((r) => (
+          <Chip key={r} active={rule === r} onClick={() => setRule(r)}>
+            {r}
+          </Chip>
+        ))}
+      </div>
 
       <p className="text-xs text-muted-foreground tabular">{list.length} clips</p>
 
@@ -203,13 +232,17 @@ function ShelfPage() {
             .map((s) => s.text)
             .join(" ");
           const needle = q.trim().toLowerCase();
+          const ruleSpan =
+            rule === "any" ? undefined : l.grammar.find((g) => g.rule === rule)?.span;
           const hit = needle
             ? l.segments.find(
                 (s) =>
                   s.text.toLowerCase().includes(needle) ||
                   s.translation.toLowerCase().includes(needle),
               )
-            : undefined;
+            : ruleSpan
+              ? l.segments.find((s) => s.text.toLowerCase().includes(ruleSpan.toLowerCase()))
+              : undefined;
           return (
             <li key={l.lesson_id}>
               <Card className="p-4">

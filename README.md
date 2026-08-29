@@ -8,7 +8,7 @@ Install it, pick a clip from the shelf, or import your own recording. Trim to th
 
 ## Features
 
-- Curated shelf of 25 licence-cleared everyday Dutch dialogues, filterable by level, length, speakers, setting, speed and licence. Search finds a structure in the transcript, not just a title.
+- Curated shelf of 31 licence-cleared everyday Dutch dialogues, filterable by level, length, speakers, setting, speed, licence and grammar structure (G1–G12). Search finds a structure in the transcript, not just a title.
 - Line-by-line listen, a 0.75× → 1.0× → 1.25× speed ladder, then a comprehension check
 - Shadowing with a 0.75× → 1.0× → speak ladder, waveform comparison, and role-play (you answer as the other speaker)
 - Free production that must use at least two target words from the clip
