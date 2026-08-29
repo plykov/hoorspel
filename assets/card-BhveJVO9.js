@@ -1,1 +1,0 @@
-import{t as e}from"./jsx-runtime-BpzPEenQ.js";import{k as t}from"./store-DMk1P0jX.js";var n=e();function r({className:e,...r}){return(0,n.jsx)(`div`,{className:t(`rounded-[var(--radius-xl)] bg-card p-5 text-foreground shadow-[var(--shadow-border)]`,e),...r})}export{r as t};
