@@ -1,0 +1,1 @@
+import{c as e}from"./index-BFKVERNW.js";var t=e;export{t as errorComponent};
