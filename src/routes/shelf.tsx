@@ -202,6 +202,14 @@ function ShelfPage() {
             .slice(0, 2)
             .map((s) => s.text)
             .join(" ");
+          const needle = q.trim().toLowerCase();
+          const hit = needle
+            ? l.segments.find(
+                (s) =>
+                  s.text.toLowerCase().includes(needle) ||
+                  s.translation.toLowerCase().includes(needle),
+              )
+            : undefined;
           return (
             <li key={l.lesson_id}>
               <Card className="p-4">
@@ -213,6 +221,11 @@ function ShelfPage() {
                       {l.source_type === "import" ? <Badge>Import</Badge> : null}
                     </div>
                     <p className="mt-1 text-sm text-muted-foreground">{l.description}</p>
+                    {hit ? (
+                      <p className="mt-2 font-display text-base leading-snug" lang="nl">
+                        {hit.text}
+                      </p>
+                    ) : null}
                     <p className="mt-2 text-xs text-muted-foreground">
                       {formatDuration(l.duration_s)} · {l.speakers.length}{" "}
                       {l.speakers.length === 1 ? "speaker" : "speakers"} · {l.speech_rate_wpm}{" "}

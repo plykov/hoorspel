@@ -3,6 +3,7 @@ import { buildLine } from "./build-line";
 import { MORE_SHELF } from "./shelf-more";
 import { SPEAK_SHELF } from "./shelf-speak";
 import { LISTEN_SHELF } from "./shelf-listen";
+import { DAILY_SHELF } from "./shelf-daily";
 
 const CC = {
   spdx: "CC-BY-4.0",
@@ -752,6 +753,7 @@ export const SHELF: Lesson[] = [
   ...MORE_SHELF,
   ...SPEAK_SHELF,
   ...LISTEN_SHELF,
+  ...DAILY_SHELF,
 ];
 
 export function getLesson(id: string): Lesson | undefined {
