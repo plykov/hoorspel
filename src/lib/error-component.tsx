@@ -4,7 +4,7 @@ import { TriangleAlert } from "lucide-react";
 function friendlyMessage(error: Error): string {
   const msg = error.message || "";
   if (/invariant failed/i.test(msg) || /content-type/i.test(msg) || /expected result/i.test(msg)) {
-    return "This clip could not be transcribed automatically. Type what you hear, then build the lesson.";
+    return "Automatic transcription hit a snag. Try Transcribe this span again, or type what you hear.";
   }
   return msg || "An unexpected error occurred. Try reloading the page.";
 }

@@ -282,7 +282,7 @@ export function cefrRank(c: Cefr): number {
 export const RESIDENCY_COPY: Record<ResidencyPref, { title: string; body: string }> = {
   device: {
     title: "On this device",
-    body: "Audio never leaves the phone. You type or edit the transcript yourself. Slower, more private.",
+    body: "Audio never leaves the phone. Transcription runs in the browser. You can still edit the text.",
   },
   eu: {
     title: "In Europe",

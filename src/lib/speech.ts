@@ -79,7 +79,10 @@ export function hasSpeechRecognition(): boolean {
   );
 }
 
-export function recognizeDutch(onResult: (text: string, final: boolean) => void): () => void {
+export function recognizeDutch(
+  onResult: (text: string, final: boolean) => void,
+  opts?: { continuous?: boolean },
+): () => void {
   if (typeof window === "undefined") return () => {};
   const Ctor =
     (
@@ -95,10 +98,17 @@ export function recognizeDutch(onResult: (text: string, final: boolean) => void)
   rec.lang = "nl-NL";
   rec.interimResults = true;
   rec.maxAlternatives = 1;
-  rec.onresult = (ev: { results: { length: number; [i: number]: { isFinal: boolean; [j: number]: { transcript: string } } } }) => {
-    const last = ev.results[ev.results.length - 1];
-    if (!last) return;
-    onResult(last[0].transcript, last.isFinal);
+  rec.continuous = Boolean(opts?.continuous);
+  rec.onresult = (ev: {
+    resultIndex: number;
+    results: { length: number; [i: number]: { isFinal: boolean; [j: number]: { transcript: string } } };
+  }) => {
+    for (let i = ev.resultIndex; i < ev.results.length; i++) {
+      const last = ev.results[i];
+      if (!last) continue;
+      const text = last[0]?.transcript ?? "";
+      if (text) onResult(text, last.isFinal);
+    }
   };
   rec.start();
   return () => {
@@ -114,6 +124,7 @@ type SpeechRecognitionLite = {
   lang: string;
   interimResults: boolean;
   maxAlternatives: number;
+  continuous: boolean;
   onresult: ((ev: never) => void) | null;
   start: () => void;
   stop: () => void;

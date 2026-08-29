@@ -118,7 +118,7 @@ function ImportPage() {
     if (!kept.length) {
       toast.error(
         clip
-          ? "Type what you hear (A: … / B: …), or dictate a line. Cloud transcription was not available."
+          ? "Transcribe this span, or type what you hear (A: … / B: …)."
           : "Paste or dictate at least one line of what you heard.",
       );
       return;
@@ -361,13 +361,13 @@ function ImportPage() {
 
       {clip && !raw.trim() ? (
         <p className="text-sm text-muted-foreground">
-          Audio is ready. Type the lines you hear below, then build. Automatic transcription is
-          optional and may not be available.
+          Audio is ready. Hit Transcribe this span — first use downloads a Dutch speech model, then
+          it stays on this device. You can still type or dictate a line.
         </p>
       ) : null}
 
       <Button size="lg" disabled={busy || !kept.length} onClick={() => void run()}>
-        {busy ? "Writing the lesson…" : kept.length ? "Build lesson" : "Type the transcript first"}
+        {busy ? "Writing the lesson…" : kept.length ? "Build lesson" : "Transcribe or type first"}
       </Button>
     </div>
   );
