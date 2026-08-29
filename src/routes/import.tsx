@@ -178,7 +178,7 @@ function ImportPage() {
     }
     try {
       const result = await Promise.race([
-        generateLesson({ title, transcript, residency }),
+        generateLesson({ title, transcript, residency, segments: builtSegs }),
         new Promise<null>((resolve) => setTimeout(() => resolve(null), 9000)),
       ]);
       const built = result && result.ok ? result.lesson : fallback;

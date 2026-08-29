@@ -2,12 +2,13 @@ import { assembleFromSegments } from "./assemble";
 import { asDialogue, parseTranscript } from "./grammar";
 import { detect, RULE_NAMES } from "./grammar";
 import { validateLesson } from "./validate";
-import type { Lesson } from "./types";
+import type { Lesson, Segment } from "./types";
 
 type GenerateInput = {
   title: string;
   transcript: string;
   residency: "device" | "eu" | "fastest";
+  segments?: Segment[];
 };
 
 type GenerateResult = { ok: true; lesson: Lesson } | { ok: false; error: string };
@@ -18,7 +19,10 @@ function regionOf(residency: GenerateInput["residency"]): Lesson["processing_reg
 
 /** Client-safe assembly used on GitHub Pages (no server functions). */
 export function generateLessonLocal(data: GenerateInput): GenerateResult {
-  const segments = parseTranscript(asDialogue(data.transcript));
+  const segments =
+    data.segments && data.segments.length > 0
+      ? data.segments
+      : parseTranscript(asDialogue(data.transcript));
   if (segments.length < 1) {
     return { ok: false, error: "Need at least one line of what you heard." };
   }

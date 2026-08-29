@@ -8,6 +8,7 @@ import { hasSpeechRecognition, recognizeDutch, scoreSpeaking, scoreTranscript } 
 import { envelopeFromText, resample, ScoreMeters, WaveRow } from "@/components/waveform";
 import { useMediaUrl } from "@/lib/media";
 import { lessonById, useHoorspel, weakPointsOf } from "@/lib/store";
+import { exerciseSpan } from "@/lib/clip-span";
 import type { Exercise, Segment } from "@/lib/types";
 import {
   choiceIsCorrect,
@@ -181,9 +182,15 @@ function ExerciseView({
   onSkip: () => void;
 }) {
   const expected = Array.isArray(ex.answer) ? ex.answer[0] : ex.answer;
-  const seg =
-    lesson.segments.find((s) => s.text === ex.target) ??
-    lesson.segments.find((s) => s.start === ex.span_start);
+  const span = exerciseSpan(lesson.segments, ex);
+  const start = span?.start;
+  const end = span?.end;
+  const line =
+    (span &&
+      lesson.segments.find(
+        (s) => start! >= s.start - 0.08 && (end ?? start!) <= s.end + 0.15,
+      )) ||
+    lesson.segments.find((s) => s.text === ex.target);
 
   if (ex.kind === "dictation") {
     return (
@@ -191,8 +198,8 @@ function ExerciseView({
         expected={expected}
         target={ex.target}
         src={src}
-        start={seg?.start}
-        end={seg?.end}
+        start={start}
+        end={end}
         onAnswer={onAnswer}
       />
     );
@@ -204,8 +211,8 @@ function ExerciseView({
         expected={expected}
         target={ex.target}
         src={src}
-        start={seg?.start}
-        end={seg?.end}
+        start={start}
+        end={end}
         rate={ex.rate}
         onAnswer={onAnswer}
       />
@@ -218,8 +225,8 @@ function ExerciseView({
         expected={expected}
         target={ex.target}
         src={src}
-        start={seg?.start}
-        end={seg?.end}
+        start={start}
+        end={end}
         onAnswer={onAnswer}
       />
     );
@@ -239,10 +246,10 @@ function ExerciseView({
       <DisfluencyTap
         expected={expected}
         target={ex.target}
-        words={seg?.words ?? []}
+        words={line?.words ?? []}
         src={src}
-        start={seg?.start}
-        end={seg?.end}
+        start={start}
+        end={end}
         onAnswer={onAnswer}
       />
     );
@@ -260,8 +267,8 @@ function ExerciseView({
         expected={expected}
         hint={ex.hint}
         src={src}
-        start={seg?.start}
-        end={seg?.end}
+        start={start}
+        end={end}
         onAnswer={onAnswer}
         onSkip={onSkip}
       />
@@ -273,15 +280,15 @@ function ExerciseView({
         target={ex.target}
         expected={expected}
         src={src}
-        start={seg?.start}
-        end={seg?.end}
+        start={start}
+        end={end}
         onAnswer={onAnswer}
         onSkip={onSkip}
       />
     );
   }
   if (ex.kind === "repeat") {
-    return <Repeat target={ex.target} expected={expected} src={src} start={seg?.start} end={seg?.end} onAnswer={onAnswer} onSkip={onSkip} />;
+    return <Repeat target={ex.target} expected={expected} src={src} start={start} end={end} onAnswer={onAnswer} onSkip={onSkip} />;
   }
   return (
     <Button onClick={() => onAnswer(true)} variant="secondary">

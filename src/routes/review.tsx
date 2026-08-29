@@ -8,6 +8,7 @@ import type { Grade } from "ts-fsrs";
 import { dueCardsOf, lessonById, useHoorspel } from "@/lib/store";
 import { useMediaUrl } from "@/lib/media";
 import { formatTime } from "@/lib/utils";
+import { clipSpan } from "@/lib/clip-span";
 
 export const Route = createFileRoute("/review")({ component: ReviewPage });
 
@@ -51,10 +52,18 @@ function ReviewPage() {
   }
 
   const audioFirst = card.seed.kind === "clip" || card.seed.kind === "pronunciation";
-  const playStart = card.seed.audio_start ?? 0;
-  const playEnd = card.seed.audio_end ?? (card.seed.kind === "clip" ? lesson?.duration_s : playStart + 4);
+  const fromSeedStart = card.seed.audio_start ?? 0;
+  const matched = lesson
+    ? clipSpan(lesson.segments, { target: card.seed.front, span_start: card.seed.audio_start })
+    : undefined;
+  const playStart = card.seed.kind === "clip" ? fromSeedStart : (matched?.start ?? fromSeedStart);
+  const playEnd =
+    card.seed.audio_end ??
+    (card.seed.kind === "clip"
+      ? lesson?.duration_s
+      : matched?.end ?? playStart + 4);
   const playText =
-    lesson?.segments.find((s) => s.start >= playStart)?.text ??
+    lesson?.segments.find((s) => playStart >= s.start - 0.05 && playStart < s.end + 0.2)?.text ??
     lesson?.segments[0]?.text ??
     card.seed.front;
 

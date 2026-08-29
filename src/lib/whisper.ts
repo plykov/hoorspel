@@ -127,12 +127,18 @@ export async function transcribeWithWhisper(
     const transcriber = await getPipe(onProgress);
     onProgress?.("Transcribing in the browser…");
     const audio = pcm16k(buffer, start, end);
-    const out = await transcriber(audio, {
+    const base = {
       language: "dutch",
       task: "transcribe",
       chunk_length_s: span > 28 ? 30 : 0,
       stride_length_s: span > 28 ? 5 : undefined,
-    });
+    };
+    let out: WhisperOut;
+    try {
+      out = await transcriber(audio, { ...base, return_timestamps: "word" });
+    } catch {
+      out = await transcriber(audio, { ...base, return_timestamps: true });
+    }
     return whisperOutputToResult(out, span);
   } catch (error) {
     const msg = error instanceof Error ? error.message : String(error ?? "");

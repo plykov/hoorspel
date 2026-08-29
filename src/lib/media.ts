@@ -308,6 +308,12 @@ function guessName(type: string): string {
   return "clip.wav";
 }
 
+export function needsSeekableRewrap(file: Blob): boolean {
+  const type = (file.type || "").toLowerCase();
+  if (!type) return true;
+  return /webm|ogg|opus/.test(type);
+}
+
 export async function blobFromTrim(
   file: Blob,
   buffer: AudioBuffer,
@@ -315,6 +321,6 @@ export async function blobFromTrim(
   end: number,
 ): Promise<Blob> {
   const trimmed = start > 0.08 || end < buffer.duration - 0.08;
-  if (!trimmed) return file;
+  if (!trimmed && !needsSeekableRewrap(file)) return file;
   return encodeWav(sliceBuffer(buffer, start, end));
 }

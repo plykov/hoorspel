@@ -74,7 +74,7 @@ export function AudioIngest({
     void blobFromTrim(file, buffer, start, end).then((blob) => {
       onClipRef.current({
         blob,
-        duration: buffer.duration,
+        duration: Math.max(0, end - start),
         start,
         end,
         name: fileName,
