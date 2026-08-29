@@ -184,7 +184,8 @@ function LessonPage() {
             </div>
           </Card>
           <Transcript
-            lesson={lesson}
+            segments={lesson.segments}
+            speakers={lesson.speakers}
             rate={rate}
             highlightSpan={span}
             src={src}

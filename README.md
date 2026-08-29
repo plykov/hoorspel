@@ -12,7 +12,8 @@ Install it, pick a clip from the shelf, or import your own recording. Trim to th
 - Line-by-line listen, a 0.75× → 1.0× → 1.25× speed ladder, then a comprehension check
 - Shadowing with a 0.75× → 1.0× → speak ladder, waveform comparison, and role-play (you answer as the other speaker)
 - Free production that must use at least two target words from the clip
-- Import from file, in-app recording, direct media URL, or the OS share sheet (Web Share Target)
+- Import from file, in-app recording, subtitles (.srt/.vtt), direct media URL, or the OS share sheet (Web Share Target)
+- After transcribe: karaoke check — tap a word to hear it in the recording, hold to correct
 - Client-side trim, speech-energy check, and EU / on-device / fastest residency choice
 - Automatic Dutch transcription in the browser (Whisper) — first use downloads a speech model, then it stays on the device; cloud STT is used when a server is present
 - Word-aligned transcript with disfluencies kept on purpose

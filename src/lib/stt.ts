@@ -203,3 +203,22 @@ export function applyWordTimings(segments: Segment[], words: SttWord[]): Segment
     };
   });
 }
+
+/** Stretch or compress guessed line timings so they cover the trimmed clip. */
+export function fitSegmentsToDuration(segments: Segment[], duration: number): Segment[] {
+  if (!segments.length || duration < 1) return segments;
+  const end = segments[segments.length - 1]!.end;
+  if (end < 0.4) return segments;
+  if (Math.abs(end - duration) < 0.8) return segments;
+  const k = duration / end;
+  return segments.map((s) => ({
+    ...s,
+    start: Number((s.start * k).toFixed(3)),
+    end: Number((s.end * k).toFixed(3)),
+    words: s.words.map((w) => ({
+      ...w,
+      start: Number((w.start * k).toFixed(3)),
+      end: Number((w.end * k).toFixed(3)),
+    })),
+  }));
+}

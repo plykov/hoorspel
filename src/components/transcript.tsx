@@ -1,18 +1,20 @@
-import { useMemo, useState } from "react";
-import type { Lesson, Segment, Speaker, Word } from "@/lib/types";
+import { useMemo, useRef, useState } from "react";
+import type { Segment, Speaker, Word } from "@/lib/types";
 import { PlayButton, playClip, stopClip } from "./player";
 import { joinDutch, tokenizeDutch, cn } from "@/lib/utils";
 import { speakDutch, stopSpeaking } from "@/lib/speech";
 
 export function Transcript({
-  lesson,
+  segments,
+  speakers,
   rate,
   highlightSpan,
   src,
   editing = false,
   onPatch,
 }: {
-  lesson: Lesson;
+  segments: Segment[];
+  speakers: Speaker[];
   rate: number;
   highlightSpan?: string;
   src?: string | null;
@@ -26,14 +28,14 @@ export function Transcript({
     <div className="flex flex-col gap-3">
       <p className="text-xs text-muted-foreground">
         {editing
-          ? "Tap a name or a word to correct it. Playback still uses the original audio."
+          ? "Tap a word to hear it in the recording. Hold to correct. Names and glosses are editable."
           : "Tap a word to hear it. Hesitations stay — they are part of what you are learning to hear."}
       </p>
-      {lesson.segments.map((seg) => (
+      {segments.map((seg) => (
         <SegmentRow
           key={seg.id}
           seg={seg}
-          speakers={lesson.speakers}
+          speakers={speakers}
           rate={rate}
           src={src}
           editing={editing}
@@ -50,20 +52,18 @@ export function Transcript({
             setWordKey(null);
           }}
           onSpeaker={(name) => {
-            const speakers = lesson.speakers.map((s) =>
-              s.id === seg.speaker ? { ...s, name } : s,
-            );
-            onPatch?.({ speakers });
+            const next = speakers.map((s) => (s.id === seg.speaker ? { ...s, name } : s));
+            onPatch?.({ speakers: next });
           }}
           onWords={(words) => {
-            const segments = lesson.segments.map((s) =>
+            const next = segments.map((s) =>
               s.id === seg.id ? { ...s, text: joinDutch(words.map((w) => w.text)), words } : s,
             );
-            onPatch?.({ segments });
+            onPatch?.({ segments: next });
           }}
           onTranslation={(translation) => {
-            const segments = lesson.segments.map((s) => (s.id === seg.id ? { ...s, translation } : s));
-            onPatch?.({ segments });
+            const next = segments.map((s) => (s.id === seg.id ? { ...s, translation } : s));
+            onPatch?.({ segments: next });
           }}
         />
       ))}
@@ -88,7 +88,7 @@ function SegmentRow({
   onTranslation,
 }: {
   seg: Segment;
-  speakers: Lesson["speakers"];
+  speakers: Speaker[];
   rate: number;
   src?: string | null;
   editing: boolean;
@@ -104,6 +104,8 @@ function SegmentRow({
 }) {
   const name = speakers.find((s) => s.id === seg.speaker)?.name ?? seg.speaker;
   const [editIdx, setEditIdx] = useState<number | "who" | "tr" | null>(null);
+  const holdRef = useRef<number | null>(null);
+  const heldRef = useRef(false);
   const highlight = useMemo(() => {
     if (!highlightSpan) return new Set<number>();
     const idx = seg.text.toLowerCase().indexOf(highlightSpan.toLowerCase());
@@ -220,9 +222,30 @@ function SegmentRow({
                     ? "bg-primary text-primary-foreground"
                     : "hover:bg-muted",
                 )}
-                onClick={() => {
-                  if (editing) {
+                onPointerDown={() => {
+                  if (!editing) return;
+                  heldRef.current = false;
+                  if (holdRef.current) window.clearTimeout(holdRef.current);
+                  holdRef.current = window.setTimeout(() => {
+                    heldRef.current = true;
                     setEditIdx(i);
+                  }, 450);
+                }}
+                onPointerUp={() => {
+                  if (holdRef.current) {
+                    window.clearTimeout(holdRef.current);
+                    holdRef.current = null;
+                  }
+                }}
+                onPointerLeave={() => {
+                  if (holdRef.current) {
+                    window.clearTimeout(holdRef.current);
+                    holdRef.current = null;
+                  }
+                }}
+                onClick={() => {
+                  if (heldRef.current) {
+                    heldRef.current = false;
                     return;
                   }
                   stopSpeaking();
